@@ -1,0 +1,16 @@
+build/*
+!build/.keep
+
+external/*
+!external/.keep
+
+examples/*
+!examples/.keep
+
+lib/*
+!lib/.keep
+
+.cache
+.cache/*
+
+compile_commands.json
