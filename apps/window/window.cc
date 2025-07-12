@@ -6,7 +6,7 @@ namespace logger = blade::logger;
 
 int main(void) 
 {
-    auto window_opt = blade::window::window::create(
+    auto window_opt = blade::window::create(
         "Blade Window",
         blade::width(800),
         blade::height(600)
