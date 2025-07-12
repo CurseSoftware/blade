@@ -1,4 +1,3 @@
-#include "core/event.h"
 #include <blade/blade.h>
 
 namespace events = blade::events;

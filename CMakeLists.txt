@@ -60,3 +60,4 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 # Build examples
 # Remember to link any libraries you might need
 add_subdirectory(apps/window)
+add_subdirectory(apps/gfx_simple)
