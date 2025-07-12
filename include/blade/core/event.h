@@ -1,3 +1,14 @@
+/* blade/core/event.h
+ * 
+ * This file contains the implementation of handling events being 
+ * dispatched and handled. Events are signals sent from Blade when
+ * certain things occur. Multiple places in the engine will send
+ * events. The most common being the `blade::window` class.
+ *
+ * This interface is designed to be extensible allowing for user-defined
+ * events. 
+ */
+
 #ifndef BLADE_CORE_EVENT_H
 #define BLADE_CORE_EVENT_H
 
@@ -20,14 +31,23 @@ namespace blade
         template <typename T>
         concept IsEvent = std::is_base_of_v<event<T>, T>;
 
+        /// @brief The event fired once the signal to shutdown the application
         struct application_quit : public event<application_quit> {}; 
-        
-        struct window_resize : public event<window_resize>
+      
+        /// @brief Event fired when a window is resized 
+        /// @tparam W is the type of the window being sent
+        template <typename W>
+        struct window_resize : public event<window_resize<W>>
         {
             u32 width {0};
             u32 height {0};
+            W& window;
 
-            window_resize(struct width w, struct height h) : width{w.w}, height{h.h} {}
+            window_resize(struct width w, struct height h, W& window) 
+                : width{w.w}
+                , height{h.h}
+                , window{window} 
+            {}
         };
 
         struct window_close : public event<window_close> {};

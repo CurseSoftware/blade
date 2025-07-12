@@ -14,8 +14,8 @@ int main(void)
 
     auto window = std::move(window_opt.value());
 
-    events::subscribe<events::window_resize>([](const events::window_resize& e) {
-        logger::trace("Window resize ({}, {})", e.width, e.height);
+    events::subscribe<events::window_resize<blade::window>>([](const events::window_resize<blade::window>& e) {
+        logger::trace("Window '{}' resized ({}, {})", e.window.get_title(), e.width, e.height);
         return true;
     });
 

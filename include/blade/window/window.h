@@ -44,6 +44,10 @@ namespace blade
 
             /// @brief Shutdown the window
             void shutdown();
+
+            /// @brief Getter for the title of the window
+            /// @return Const reference to the title
+            const std::string& get_title() const { return _title; }
         
         private:
             window(

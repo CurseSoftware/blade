@@ -92,11 +92,9 @@ namespace blade
         {
             const char* atom_name = "WM_DELETE_WINDOW";
             const bool only_if_exists = true;
-            wm_protocols = XInternAtom(wnd->_display, atom_name, only_if_exists);
-        }
-
-        {
             const int count = 1;
+            
+            wm_protocols = XInternAtom(wnd->_display, atom_name, only_if_exists);
             XSetWMProtocols(wnd->_display, wnd->_window, &wm_protocols, count);
         }
 
@@ -238,7 +236,7 @@ namespace blade
     {
         _width = width.w;
         _height = height.h;
-        events::dispatch(events::window_resize(width, height));
+        events::dispatch(events::window_resize(width, height, *this));
     }
 
     void window::_pump_messages()
