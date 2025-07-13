@@ -3,6 +3,7 @@
 
 #include "core/core.h"
 #include <X11/X.h>
+#include <limits>
 #include <memory>
 #include <optional>
 
@@ -17,6 +18,8 @@
 
 namespace blade
 {
+    const i32 INVALID_WINDOW_ID = -1;
+    
     class window
     {
         public:
@@ -45,12 +48,18 @@ namespace blade
             /// @brief Shutdown the window
             void shutdown();
 
+            std::optional<std::unique_ptr<window>> spawn_child(const std::string& name, width w, height h);
+
             /// @brief Getter for the title of the window
             /// @return Const reference to the title
             const std::string& get_title() const { return _title; }
+
+            /// @brief Getter for the id of the window
+            /// @return i32 of the window id 
+            i32 get_id() const { return _id; }
         
         private:
-            window(
+            [[nodiscard]] window(
                 const std::string& name
                 , width width
                 , height height
@@ -68,6 +77,7 @@ namespace blade
             /// @param height Height after resize
             void _handle_resize(struct width width, struct height height);
 
+            i32 _id { INVALID_WINDOW_ID }; 
             u32 _width { 0 };
             u32 _height { 0 };
             std::string _title { "" };

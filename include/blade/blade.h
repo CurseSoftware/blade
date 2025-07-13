@@ -3,5 +3,6 @@
 
 #include "core/core.h"
 #include "window/window.h"
+#include "gfx/gfx.h"
 
 #endif // BLADE_BLADE_H

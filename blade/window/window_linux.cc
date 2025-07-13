@@ -13,6 +13,9 @@ namespace blade
     const unsigned int WINDOW_MIN_WIDTH = 640;
     const unsigned int WINDOW_MIN_HEIGHT = 480;
     
+    static i32 current_id = 0;
+        
+    
     XContext window::_global_x11_context = 0;
 
     std::optional<std::unique_ptr<window>> window::create(
@@ -20,12 +23,14 @@ namespace blade
         width w,
         height h
     ) {
-        
         auto wnd = std::make_unique<window>(window(name, w, h));
 
         wnd->_display = XOpenDisplay(nullptr);
 
-        logger::info("Creating window {} at dimensions ({}, {})", name, w.w, h.h);
+        wnd->_id = current_id;
+        current_id += 1;
+
+        logger::info("Creating window {} with id {} at dimensions ({}, {})", name, wnd->_id, w.w, h.h);
 
         // Initialize the global window context with X11 only if it has not been before
         {
@@ -249,5 +254,14 @@ namespace blade
         }
 
         XFlush(_display);
+    }
+
+    std::optional<std::unique_ptr<window>> spawn_child(
+        const std::string& name,
+        width w,
+        height h
+    ) {
+        // TODO
+        return std::nullopt;
     }
 } // namespace blade

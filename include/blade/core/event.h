@@ -78,7 +78,7 @@ namespace blade
 
             template <IsEvent T>
             std::vector<typename event<T>::event_callback> event_bus<T>::_handlers; 
-        }
+        } // detail namespace
 
         /// @brief Register a handler to process events of this type
         /// @tparam T Type of event to register callback to handle
@@ -97,7 +97,7 @@ namespace blade
         {
             detail::event_bus<T>::dispatch(event);
         }
-    }
-}
+    } // events namespace
+} // blade namespace
 
 #endif // BLADE_CORE_EVENT_H

@@ -33,4 +33,8 @@
 #endif
 #endif
 
+#ifdef _DEBUG
+#define BLADE_DEBUG
+#endif
+
 #endif // BLADE_CORE_DEFINES_H

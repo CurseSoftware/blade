@@ -45,6 +45,6 @@ namespace blade
 
         u32 h {0};
     };
-}
+} // blade namespace
 
 #endif

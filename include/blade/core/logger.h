@@ -22,7 +22,7 @@ namespace blade
         template <typename... Args>
         inline void warn(const std::format_string<Args...> fmt, Args&&... args) 
         {
-            std::cout << "[WARN] " << std::vformat(fmt.get(), std::make_format_args(args...)) << '\n';
+            std::cout << "[WARN]  " << std::vformat(fmt.get(), std::make_format_args(args...)) << '\n';
         }
 
         template <typename... Args>
@@ -34,7 +34,7 @@ namespace blade
         template <typename... Args>
         inline void info(const std::format_string<Args...> fmt, Args&&... args) 
         {
-            std::cout << "[INFO] " << std::vformat(fmt.get(), std::make_format_args(args...)) << '\n';
+            std::cout << "[INFO]  " << std::vformat(fmt.get(), std::make_format_args(args...)) << '\n';
         }
 
         template <typename... Args>

@@ -18,6 +18,10 @@ int main(void)
         return true;
     });
 
+#ifdef _DEBUG
+    logger:debug("debug");
+#endif
+
     window->show();
     
     while (!window->should_close())
