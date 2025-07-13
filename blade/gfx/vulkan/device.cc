@@ -1,9 +1,10 @@
 #include "gfx/vulkan/types.h"
+#include "gfx/vulkan/utils.h"
 #include "gfx/vulkan/common.h"
 
+#include <cstring>
 #include <map>
 #include <optional>
-#include <vulkan/vulkan_core.h>
 
 namespace blade
 {
@@ -14,22 +15,98 @@ namespace blade
             std::optional<device> device::create(const struct instance& instance) noexcept
             {
                 device device {};
-                VkPhysicalDevice physical_device = pick_physical_device(instance);
+                device.allocator = instance.allocator;
+                device.physical_device = pick_physical_device(instance);
                 
-                if (physical_device == VK_NULL_HANDLE)
+                if (device.physical_device == VK_NULL_HANDLE)
                 {
                     logger::error("Failed to create vulkan device.");
                     return std::nullopt;
                 }
 
-                device.physical_device = physical_device;
+                auto graphics_queue_opt = device.find_graphics_queue();
+                if (!graphics_queue_opt.has_value())
+                {
+                    logger::error("Failed to create vulkan device: could not find graphics queue family");
+                    return std::nullopt;
+                }
+
+                device.graphics_queue_family = graphics_queue_opt.value();
+
+                device.create_logical_device(instance);
 
                 return device;
             }
 
+            void device::create_logical_device(const instance& instance) noexcept
+            {
+                const f32 graphics_queue_priority = 1.0f;
+                VkPhysicalDeviceFeatures default_physical_device_features {};
+                
+                VkDeviceQueueCreateInfo graphics_queue_info = {
+                    .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                    .flags = 0,
+                    .queueFamilyIndex = graphics_queue_family.index,
+                    .queueCount = device::GRAPHICS_QUEUE_COUNT,
+                    .pQueuePriorities = &graphics_queue_priority
+                };
+                
+                VkDeviceCreateInfo create_info = {
+                    .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+                    .queueCreateInfoCount = 1,
+                    .pQueueCreateInfos = &graphics_queue_info,
+                    .pEnabledFeatures = &default_physical_device_features,
+                };
+
+                VK_ASSERT(vkCreateDevice(physical_device, &create_info, nullptr, &logical_device));
+
+                const u32 queue_index = 0;
+                vkGetDeviceQueue(logical_device, graphics_queue_family.index, queue_index, &graphics_queue_family.queue);
+            }
+
             void device::destroy() noexcept
             {
-                // TODO
+                logger::info("Destroying vulkan device...");
+                vkDestroyDevice(logical_device, allocator);
+                logger::info("Destroyed.");
+            }
+
+            std::optional<queue_family> device::find_graphics_queue() noexcept
+            {
+                
+                queue_family queue {};
+                auto index_opt = find_queue_family_index(VK_QUEUE_GRAPHICS_BIT);
+                if (!index_opt.has_value())
+                {
+                    logger::error("Failed to find queue family with graphics bit");
+                    return std::nullopt;
+                }
+
+                return queue;
+            }
+
+            std::optional<u32> device::find_queue_family_index(VkQueueFlagBits queue_type) noexcept
+            {
+                u32 queue_family_count = 0;
+                VkQueueFamilyProperties* dummy_queue_family_properties = nullptr;
+                std::vector<VkQueueFamilyProperties> queue_families {};
+                
+                vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, dummy_queue_family_properties);
+                queue_families.resize(queue_family_count);
+                vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families.data());
+
+                usize i = 0;
+                for (const auto& queue_family : queue_families)
+                {
+                    if (queue_family.queueFlags & queue_type)
+                    {
+                        return static_cast<u32>(i);
+                    }
+
+                    i++;
+                }
+
+                return std::nullopt;
             }
 
             VkPhysicalDevice device::pick_physical_device(const struct instance &instance) noexcept

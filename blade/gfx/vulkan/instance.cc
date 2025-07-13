@@ -46,10 +46,10 @@ namespace blade
                 create_info.enabledExtensionCount = static_cast<u32>(extensions.size());
                 create_info.ppEnabledExtensionNames = extensions.data();
 
+                std::vector<const char*> validation_layer_names = {};
 #ifdef BLADE_DEBUG
-
+                validation_layer_names.push_back("VK_LAYER_KHRONOS_validation");
                 logger::debug("Validation layers enabled. Enumerating: ");
-                std::vector<const char*> validation_layer_names = { "VK_LAYER_KHRONOS_validation" };
                 u32 available_layer_count = 0;
                 std::vector<VkLayerProperties> available_layers {};
 
@@ -89,6 +89,7 @@ namespace blade
 
                 struct instance inst {};
 
+                inst.validation_layers = validation_layer_names;
                 inst.allocator = allocator;
 
                 VK_ASSERT(vkCreateInstance(&create_info, inst.allocator, &inst.instance));
