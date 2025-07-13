@@ -23,6 +23,7 @@ namespace blade
                 private:
                     bool _is_initialized { false };
                     struct instance instance {};
+                    struct device device {};
             };
         } // vk namespace
     } // gfx namespace

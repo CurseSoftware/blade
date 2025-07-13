@@ -30,6 +30,9 @@ namespace blade
 
                 instance.create_debug_messenger();
 
+                auto device_opt = device::create(instance);
+                device = device_opt.value();
+
                 _is_initialized = true;
                 return true;
             }
@@ -37,6 +40,8 @@ namespace blade
             bool vulkan_backend::shutdown() noexcept
             {
                 logger::info("Vulkan backend shutting down");
+
+                device.destroy();
 
                 instance.destroy_debug_messenger();
                 instance.destroy();
