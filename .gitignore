@@ -1,5 +1,8 @@
-build/*
-!build/.keep
+build_release/*
+!build_release/.keep
+
+build_debug/*
+!build_debug/.keep
 
 external/*
 !external/.keep

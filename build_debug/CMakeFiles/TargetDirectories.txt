@@ -1,9 +1,0 @@
-/home/raustin/curse-software/blade/build_debug/CMakeFiles/blade.dir
-/home/raustin/curse-software/blade/build_debug/CMakeFiles/edit_cache.dir
-/home/raustin/curse-software/blade/build_debug/CMakeFiles/rebuild_cache.dir
-/home/raustin/curse-software/blade/build_debug/apps/window/CMakeFiles/window_example.dir
-/home/raustin/curse-software/blade/build_debug/apps/window/CMakeFiles/edit_cache.dir
-/home/raustin/curse-software/blade/build_debug/apps/window/CMakeFiles/rebuild_cache.dir
-/home/raustin/curse-software/blade/build_debug/apps/gfx_simple/CMakeFiles/gfx_simple_example.dir
-/home/raustin/curse-software/blade/build_debug/apps/gfx_simple/CMakeFiles/edit_cache.dir
-/home/raustin/curse-software/blade/build_debug/apps/gfx_simple/CMakeFiles/rebuild_cache.dir
