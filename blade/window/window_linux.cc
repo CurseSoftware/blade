@@ -1,3 +1,4 @@
+#include "gfx/view.h"
 #include "window/window.h"
 #include "core/core.h"
 
@@ -263,5 +264,15 @@ namespace blade
     ) {
         // TODO
         return std::nullopt;
+    }
+
+    struct gfx::framebuffer_create_info::native_window_data window::get_window_handle() const noexcept
+    {
+        struct gfx::framebuffer_create_info::native_window_data data = {
+            .display = _display,
+            .window = _window
+        };
+
+        return data;
     }
 } // namespace blade

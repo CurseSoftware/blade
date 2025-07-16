@@ -1,4 +1,6 @@
 #include "gfx/renderer.h"
+#include "gfx/handle.h"
+#include "gfx/view.h"
 #include "gfx/vulkan/renderer.h"
 
 #include <memory>
@@ -35,6 +37,16 @@ namespace blade
             }
             
             return nullptr;
+        }
+
+        framebuffer_handle renderer::create_framebuffer(framebuffer_create_info info)
+        {
+            if (_backend)
+            {
+                return _backend->create_framebuffer(info);
+            }
+
+            return framebuffer_handle { .index = BLADE_NULL_HANDLE };
         }
 
         void renderer::shutdown() noexcept

@@ -1,5 +1,8 @@
+#include "gfx/handle.h"
 #include "gfx/renderer.h"
+#include "gfx/view.h"
 #include "gfx/vulkan/types.h"
+#include <unordered_map>
 
 #ifndef BLADE_GFX_VULKAN_VULKAN_H
 #define BLADE_GFX_VULKAN_VULKAN_H
@@ -19,11 +22,21 @@ namespace blade
                     bool init(const init_info& init) noexcept override;
                     bool shutdown() noexcept override;
                     void frame() noexcept override;
+                    framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept override;
+
+                    struct view 
+                    {
+                        struct surface surface;
+                        VkSwapchainKHR swapchain { VK_NULL_HANDLE };
+
+                        void destroy();
+                    };
 
                 private:
                     bool _is_initialized { false };
-                    struct instance instance {};
+                    struct instance _instance {};
                     struct device device {};
+                    std::unordered_map<framebuffer_handle, view> _views {};
             };
         } // vk namespace
     } // gfx namespace

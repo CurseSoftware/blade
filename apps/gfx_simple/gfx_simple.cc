@@ -5,10 +5,13 @@ namespace gfx = blade::gfx;
 
 int main(void)
 {
+    const auto width = blade::width(800);
+    const auto height = blade::height(800);
+    
     auto window_opt = blade::window::create(
         "Blade Window",
-        blade::width(800),
-        blade::height(600)
+        width,
+        height
     );
 
     auto window = std::move(window_opt.value());
@@ -25,6 +28,12 @@ int main(void)
         logger::fatal("Failed to create renderer");
         return 1;
     }
+
+    gfx->create_framebuffer({
+        .native_window_data = window->get_window_handle(),
+        .width = width,
+        .height = height
+    });
 
     gfx->shutdown();
 

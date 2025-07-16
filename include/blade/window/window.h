@@ -2,14 +2,14 @@
 #define BLADE_WINDOW_WINDOW_H
 
 #include "core/core.h"
-#include <X11/X.h>
-#include <limits>
+#include "gfx/view.h"
 #include <memory>
 #include <optional>
 
 #if defined(BLADE_PLATFORM_WINDOWS)
 #include <windows.h>
 #elif defined(BLADE_PLATFORM_LINUX)
+#include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
@@ -57,6 +57,10 @@ namespace blade
             /// @brief Getter for the id of the window
             /// @return i32 of the window id 
             i32 get_id() const { return _id; }
+
+            /// @brief Get the window handle for this window
+            /// @return data for the window handle. See gfx module
+            struct gfx::framebuffer_create_info::native_window_data get_window_handle() const noexcept;
         
         private:
             [[nodiscard]] window(

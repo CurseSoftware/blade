@@ -7,6 +7,8 @@
 #define BLADE_GFX_RENDERER_H
 
 #include "core/core.h"
+#include "gfx/handle.h"
+#include "gfx/view.h"
 #include <memory>
 
 namespace blade
@@ -48,6 +50,7 @@ namespace blade
                 virtual bool init(const init_info& init) noexcept = 0;
                 virtual bool shutdown() noexcept = 0;
                 virtual void frame() noexcept = 0;
+                virtual framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept = 0;
 
                 // TODO: other renderer backend methods
             
@@ -61,6 +64,9 @@ namespace blade
                 static std::unique_ptr<renderer> create(const init_info& init) noexcept;
 
                 void shutdown() noexcept;
+
+                framebuffer_handle create_framebuffer(framebuffer_create_info create_info);
+                
 
             private:
                 [[nodiscard]] renderer() {}

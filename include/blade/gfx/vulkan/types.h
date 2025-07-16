@@ -2,8 +2,8 @@
 #define BLADE_GFX_VULKAN_TYPES_H
 
 #include "gfx/vulkan/common.h"
+#include "gfx/view.h"
 #include <optional>
-#include <vulkan/vulkan_core.h>
 
 namespace blade
 {
@@ -77,6 +77,18 @@ namespace blade
                 queue_family present_queue_family {};
                 queue_family transfer_queue_family {};
                 VkCommandPool graphics_command_pool { VK_NULL_HANDLE };
+            };
+
+            struct surface
+            {
+                surface(const instance& instance) : instance{instance} {}
+                static std::optional<surface> create(const struct instance& instance, framebuffer_create_info create_info);
+
+                void destroy();
+
+                const struct instance& instance;
+                
+                VkSurfaceKHR vk_surface { VK_NULL_HANDLE };
             };
         } // vk namespace
     } // gfx namespace
