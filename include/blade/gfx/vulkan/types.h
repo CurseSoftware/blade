@@ -43,6 +43,11 @@ namespace blade
             {
                 static const u32 GRAPHICS_QUEUE_COUNT = 1;
 
+                struct create_options 
+                {
+                    bool check_present { false };
+                };
+
                 /// @brief Create a vk::device object to handle managing VkPhysicalDevice and VkDevice data
                 /// @param instance The vk::instance manager to create device from
                 static std::optional<device> create(const struct instance& instance) noexcept;
@@ -63,6 +68,8 @@ namespace blade
                 void create_logical_device(const instance& instance) noexcept;
 
                 std::optional<queue_family> find_graphics_queue() noexcept;
+                std::optional<queue_family> find_present_queue(const struct surface& surface) noexcept;
+                std::optional<u32> find_present_queue_index(const struct surface& surface) noexcept;
 
                 /// @brief Find a queue family of a given type
                 /// @param queue_type VkQueueFlagBits of the queue to find

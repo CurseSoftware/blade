@@ -5,6 +5,8 @@
 #include <cstring>
 #include <map>
 #include <optional>
+#include <set>
+#include <vulkan/vulkan_core.h>
 
 namespace blade
 {
@@ -40,21 +42,28 @@ namespace blade
 
             void device::create_logical_device(const instance& instance) noexcept
             {
-                const f32 graphics_queue_priority = 1.0f;
+                const f32 queue_priority = 1.0f;
                 VkPhysicalDeviceFeatures default_physical_device_features {};
+                std::vector<VkDeviceQueueCreateInfo> queue_create_infos {};
+                std::set<u32> unique_queue_families = { graphics_queue_family.index, present_queue_family.index };
                 
-                VkDeviceQueueCreateInfo graphics_queue_info = {
-                    .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                    .flags = 0,
-                    .queueFamilyIndex = graphics_queue_family.index,
-                    .queueCount = device::GRAPHICS_QUEUE_COUNT,
-                    .pQueuePriorities = &graphics_queue_priority
-                };
+                for (const u32& queue_family : unique_queue_families)
+                {
+                    VkDeviceQueueCreateInfo queue_info = {
+                        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                        .flags = 0,
+                        .queueFamilyIndex = graphics_queue_family.index,
+                        .queueCount = 1,
+                        .pQueuePriorities = &queue_priority
+                    };
+                    queue_create_infos.push_back(queue_info);
+                }
+
                 
                 VkDeviceCreateInfo create_info = {
                     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-                    .queueCreateInfoCount = 1,
-                    .pQueueCreateInfos = &graphics_queue_info,
+                    .queueCreateInfoCount = static_cast<u32>(queue_create_infos.size()),
+                    .pQueueCreateInfos = queue_create_infos.data(),
                     .pEnabledFeatures = &default_physical_device_features,
                 };
 
@@ -62,6 +71,7 @@ namespace blade
 
                 const u32 queue_index = 0;
                 vkGetDeviceQueue(logical_device, graphics_queue_family.index, queue_index, &graphics_queue_family.queue);
+                vkGetDeviceQueue(logical_device, graphics_queue_family.index, queue_index, &present_queue_family.queue);
             }
 
             void device::destroy() noexcept
@@ -83,6 +93,45 @@ namespace blade
                 }
 
                 return queue;
+            }
+
+            std::optional<queue_family> device::find_present_queue(const surface& surface) noexcept
+            {
+                queue_family queue {};
+                auto index_opt = device::find_present_queue_index(surface);
+                if (!index_opt.has_value())
+                {
+                    logger::error("Failed to find queue index with present bit");
+                    return std::nullopt;
+                }
+
+                return queue;
+            }
+
+            std::optional<u32> device::find_present_queue_index(const struct surface& surface) noexcept
+            {
+                u32 queue_family_count = 0;
+                VkQueueFamilyProperties* dummy_queue_family_properties = nullptr;
+                std::vector<VkQueueFamilyProperties> queue_families {};
+                
+                vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, dummy_queue_family_properties);
+                queue_families.resize(queue_family_count);
+                vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families.data());
+
+                usize i = 0;
+                for (const auto& queue_family : queue_families)
+                {
+                    VkBool32 present_support = VK_FALSE;
+                    vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.vk_surface, &present_support);
+                    if (present_support)
+                    {
+                        return static_cast<u32>(i);
+                    }
+
+                    i++;
+                }
+
+                return std::nullopt;
             }
 
             std::optional<u32> device::find_queue_family_index(VkQueueFlagBits queue_type) noexcept
@@ -160,6 +209,7 @@ namespace blade
                 usize score = 0;
                 VkPhysicalDeviceProperties properties {};
                 VkPhysicalDeviceFeatures features {};
+                VkBool32 present_supported = VK_FALSE;
                 
                 vkGetPhysicalDeviceProperties(physical_device, &properties);
                 vkGetPhysicalDeviceFeatures(physical_device, &features);

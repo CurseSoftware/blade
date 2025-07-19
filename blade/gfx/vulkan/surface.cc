@@ -2,7 +2,6 @@
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/platform.h"
 #include "gfx/vulkan/utils.h"
-#include <utility>
 
 namespace blade
 {
