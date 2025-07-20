@@ -6,7 +6,6 @@
 #include <map>
 #include <optional>
 #include <set>
-#include <vulkan/vulkan_core.h>
 
 namespace blade
 {
@@ -14,11 +13,18 @@ namespace blade
     {
         namespace vk
         {
-            std::optional<device> device::create(const struct instance& instance) noexcept
+            std::optional<device> device::create(const struct instance& instance, create_options options) noexcept
             {
                 device device {};
                 device.allocator = instance.allocator;
-                device.physical_device = pick_physical_device(instance);
+                std::vector<const char*> device_extensions {};
+
+                if (options.use_swapchain)
+                {
+                    device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+                }
+                
+                device.physical_device = pick_physical_device(instance, device_extensions);
                 
                 if (device.physical_device == VK_NULL_HANDLE)
                 {
@@ -35,12 +41,12 @@ namespace blade
 
                 device.graphics_queue_family = graphics_queue_opt.value();
 
-                device.create_logical_device(instance);
+                device.create_logical_device(instance, device_extensions);
 
                 return device;
             }
 
-            void device::create_logical_device(const instance& instance) noexcept
+            void device::create_logical_device(const instance& instance, const std::vector<const char*>& extensions) noexcept
             {
                 const f32 queue_priority = 1.0f;
                 VkPhysicalDeviceFeatures default_physical_device_features {};
@@ -64,6 +70,8 @@ namespace blade
                     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
                     .queueCreateInfoCount = static_cast<u32>(queue_create_infos.size()),
                     .pQueueCreateInfos = queue_create_infos.data(),
+                    .enabledExtensionCount = static_cast<u32>(extensions.size()),
+                    .ppEnabledExtensionNames = extensions.data(),
                     .pEnabledFeatures = &default_physical_device_features,
                 };
 
@@ -158,7 +166,7 @@ namespace blade
                 return std::nullopt;
             }
 
-            VkPhysicalDevice device::pick_physical_device(const struct instance &instance) noexcept
+            VkPhysicalDevice device::pick_physical_device(const struct instance &instance, const std::vector<const char*>& extensions) noexcept
             {
                 VkPhysicalDevice physical_device = VK_NULL_HANDLE;
                 u32 device_count = 0;
@@ -180,7 +188,7 @@ namespace blade
                 std::multimap<i32, VkPhysicalDevice> candidates {};
                 for (const auto& device : physical_devices)
                 {
-                    usize score = rate_physical_device(device);
+                    usize score = rate_physical_device(device, extensions);
                     candidates.insert(std::make_pair(score, device));
                 }
 
@@ -204,7 +212,7 @@ namespace blade
                 return physical_device;
             }
 
-            usize device::rate_physical_device(VkPhysicalDevice physical_device) noexcept
+            usize device::rate_physical_device(VkPhysicalDevice physical_device, const std::vector<const char*>& extensions) noexcept
             {
                 usize score = 0;
                 VkPhysicalDeviceProperties properties {};
@@ -226,8 +234,37 @@ namespace blade
                     return 0;
                 }
 
+
+                bool supports_extensions = check_device_extension_support(physical_device, extensions);
+                if (!supports_extensions)
+                {
+                    return 0;
+                }
+
                 logger::debug("Device {} got score {}", properties.deviceName, score);
                 return score;
+            }
+
+            bool device::check_device_extension_support(VkPhysicalDevice physical_device, const std::vector<const char*>& required_device_extensions) noexcept
+            {
+                u32 extension_count = 0;
+                const char* layer_name = nullptr;
+                VkExtensionProperties *dummy_properties = nullptr;
+                std::vector<VkExtensionProperties> available_extensions {};
+
+                VK_ASSERT(vkEnumerateDeviceExtensionProperties(physical_device, layer_name, &extension_count, dummy_properties));
+                available_extensions.resize(extension_count);
+                
+                VK_ASSERT(vkEnumerateDeviceExtensionProperties(physical_device, layer_name, &extension_count, available_extensions.data()));
+
+                std::set<std::string> required_extensions(required_device_extensions.begin(), required_device_extensions.end());
+                
+                for (const auto& extension : available_extensions)
+                {
+                    required_extensions.erase(extension.extensionName);
+                }
+
+                return required_extensions.empty();
             }
 
             bool device::is_device_suitable(VkPhysicalDevice physical_device) noexcept
@@ -240,6 +277,33 @@ namespace blade
 
                 return properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
                                                         && features.features.geometryShader;;
+            }
+
+            struct swapchain::details device::query_swapchain_capabilities(const struct surface& surface) const noexcept
+            {
+                struct swapchain::details details {};
+                VkSurfaceFormatKHR* dummy_formats = nullptr;
+                VkPresentModeKHR* dummy_present_modes = nullptr;
+                u32 format_count = 0;
+                u32 present_mode_count = 0;
+
+                vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface.vk_surface, &details.capabilities);
+                vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.vk_surface, &format_count, dummy_formats);
+                vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.vk_surface, &format_count, dummy_present_modes);
+
+                if (format_count != 0)
+                {
+                    details.formats.resize(format_count);
+                    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.vk_surface, &format_count, details.formats.data());
+                }
+
+                if (present_mode_count != 0)
+                {
+                    details.present_modes.resize(present_mode_count);
+                    vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.vk_surface, &format_count, details.present_modes.data());
+                }
+
+                return details;
             }
         } // vk namespace
     } // gfx namespace

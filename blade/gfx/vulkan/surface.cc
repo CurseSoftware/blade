@@ -16,6 +16,7 @@ namespace blade
             ) {
                 logger::info("Creating vulkan surface.");
                 struct surface surface {instance};
+
                 
                 VkSurfaceCreateInfo surface_info {};
                 surface_info.sType = VK_STRUCTURE_TYPE_SURFACE_CREATE_INFO_KHR;
@@ -40,7 +41,7 @@ namespace blade
                 logger::info("Destroying vulkan surface...");
                 if (vk_surface != VK_NULL_HANDLE)
                 {
-                    vkDestroySurfaceKHR(instance.instance, vk_surface, instance.allocator);
+                    vkDestroySurfaceKHR(instance.get().instance, vk_surface, instance.get().allocator);
                 }
                 logger::info("Destroyed.");
             }

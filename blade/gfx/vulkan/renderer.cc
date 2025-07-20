@@ -33,8 +33,8 @@ namespace blade
 
                 _instance.create_debug_messenger();
 
-                auto device_opt = device::create(_instance);
-                device = device_opt.value();
+                auto device_opt = device::create(_instance, { .use_swapchain = true });
+                _device = device_opt.value();
 
                 _is_initialized = true;
                 return true;
@@ -44,14 +44,14 @@ namespace blade
             {
                 logger::info("Vulkan backend shutting down");
 
-                for (auto view : _views)
+                for (auto&& view : _views)
                 {
                     logger::info("Destroying view: {}", view.first.index);
                     view.second.destroy();
                     logger::info("Destroyed view {}.", view.first.index);
                 }
 
-                device.destroy();
+                _device.destroy();
 
                 _instance.destroy_debug_messenger();
                 _instance.destroy();
@@ -73,12 +73,30 @@ namespace blade
                 }
 
                 auto surface = surface_opt.value();
+
                 vulkan_backend::view view = {
                     .surface = surface
                 };
 
+                if (create_info.native_window_data)
+                {
+                    swapchain::create_info swapchain_create_info {};
+                    swapchain_create_info.present_mode = present_mode::MAILBOX;
+                    swapchain_create_info.preferred_format = VK_FORMAT_B8G8R8A8_SRGB;
+                    swapchain_create_info.extent.width = create_info.width;
+                    swapchain_create_info.extent.height = create_info.height;
+                    
+                    view.swapchain = swapchain::create(surface, _device, swapchain_create_info);
+                    if (!view.swapchain.has_value())
+                    {
+                        logger::error("Failed to create swapchain");
+                        return framebuffer_handle{.index = BLADE_NULL_HANDLE};
+                    }
+                    logger::info("Swapchain created.");
+                }
+
                 const framebuffer_handle handle {.index=framebuffer_handle_id};
-                _views.insert(std::make_pair(handle, view));
+                _views.insert(std::make_pair(handle, std::move(view)));
 
                 framebuffer_handle_id += 1;
                 
@@ -92,6 +110,10 @@ namespace blade
 
             void vulkan_backend::view::destroy()
             {
+                if (swapchain.has_value())
+                {
+                    swapchain.value().destroy();
+                }
                 surface.destroy();
             }
         } // vk namespace
