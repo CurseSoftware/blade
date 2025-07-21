@@ -1,5 +1,5 @@
-# C++ Template Project built using CMake
-This is a cross-platform template C++ project using the CMake build system.
+# Blade Game & Application Library
+Cross platform utility library for constructing games and applications in C++.
 
 ## Building
 #### Build Requirements
@@ -8,15 +8,12 @@ C++ 20 compliant compiler
 #### Build commands
 There are included `go.sh` and `go.ps` scripts in the project root directory.
 
-Run the command `./go.sh Build-All` to run the build commands on Linux or MacOS.
+Run the command `./go.sh Build-Debug` to build the debug build commands on Linux or MacOS.
 
-Run the command `./go.ps Build-All` to run the build commands on Windows.
+Run the command `./go.sh Build-Release` to build the release build commands on Linux or MacOS.
 
-Alternatively, you can just run the build commands yourself:
-```
-cmake -B build .
-cmake --build build
-```
+Run the commnad `./go.sh Run-Example <example_name> <debug | release>` to run an example
+
 These commands place all build utilities CMake generates in the `build` directory which is preferable to cluttering the root dir.
 
 ## Using compile_commands.json
