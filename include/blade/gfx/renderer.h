@@ -22,7 +22,7 @@ namespace blade
 
             enum class reset
             {
-                VSYNC    
+                VSYNC
             } reset { resolution::reset::VSYNC };
         };
         
@@ -37,7 +37,14 @@ namespace blade
 
                 AUTO
             } type { init_info::type::AUTO };
-           
+          
+            // Enable debug behavior
+            bool enable_debug { false };
+
+            /** @brief Require a surface like a window to render to */
+            bool require_surface { false };
+
+            /** @brief Resolution information */
             struct resolution resolution {};
         };
         

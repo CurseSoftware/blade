@@ -2,6 +2,7 @@
 #define BLADE_GFX_VULKAN_TYPES_H
 
 #include "gfx/vulkan/common.h"
+#include "gfx/vulkan/instance.h"
 #include "gfx/view.h"
 #include <functional>
 #include <optional>
@@ -48,27 +49,27 @@ namespace blade
             }
 
 
-            struct instance
-            {
-                /// @brief Create a vulkan instance
-                /// @return Some(instance) on success. `std::nullopt` otherwise
-                static std::optional<instance> create(VkAllocationCallbacks* allocator = nullptr) noexcept;
-
-                /// @brief Enable vulkan debug callbacks
-                /// @param allocator `VkAllocationCallbacks` allocator to allocate vulkan objects
-                void create_debug_messenger() noexcept;
-
-                void destroy() noexcept;
-
-                void destroy_debug_messenger() noexcept;
-
-                const std::vector<const char*> get_validation_layers() const noexcept { return validation_layers; }
-
-                VkAllocationCallbacks* allocator { nullptr };
-                VkInstance instance { VK_NULL_HANDLE };
-                VkDebugUtilsMessengerEXT debug_messenger { VK_NULL_HANDLE };
-                std::vector<const char*> validation_layers;
-            };
+//            struct instance
+//            {
+//                /// @brief Create a vulkan instance
+//                /// @return Some(instance) on success. `std::nullopt` otherwise
+//                static std::optional<instance> create(VkAllocationCallbacks* allocator = nullptr) noexcept;
+//
+//                /// @brief Enable vulkan debug callbacks
+//                /// @param allocator `VkAllocationCallbacks` allocator to allocate vulkan objects
+//                void create_debug_messenger() noexcept;
+//
+//                void destroy() noexcept;
+//
+//                void destroy_debug_messenger() noexcept;
+//
+//                const std::vector<const char*> get_validation_layers() const noexcept { return validation_layers; }
+//
+//                VkAllocationCallbacks* allocator { nullptr };
+//                VkInstance instance { VK_NULL_HANDLE };
+//                VkDebugUtilsMessengerEXT debug_messenger { VK_NULL_HANDLE };
+//                std::vector<const char*> validation_layers;
+//            };
 
             struct queue_family
             {

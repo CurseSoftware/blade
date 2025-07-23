@@ -30,10 +30,6 @@ namespace blade
                     struct framebuffer_create_info::native_window_data window_data
                 );
             } // platform namespace
-
-            /// @brief Append platform-specific vulkan extensions to the list
-            /// @param extensions Vector of extensions to append to
-            void get_platform_extensions(std::vector<const char*>& extensions);
         } // vk namespace
     } // gfx namespace
 } // blade namespace

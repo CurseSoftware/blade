@@ -46,6 +46,8 @@ namespace blade
                 }
             }
 
+            bool check_extension_supported(const char* ext) noexcept;
+
             /// @brief Get a string from a `VkResult`
             /// @param result Result to get string from
             /// @param get_extended `bool` to get extended string
@@ -197,6 +199,10 @@ namespace blade
                     assert(res == VK_SUCCESS);														                                       \
                 }																									                       \
             }
+
+            #define _BLADE_MAKE_VK_API_VERSION(major, minor) VK_API_VERSION_##major##_##minor
+            #define BLADE_MAKE_VK_API_VERSION(major, minor) BLADE_MAKE_VK_API_VERSION(major, minor)
+
         } // vk namespace
     } // gfx namespace
 } // blade namespace

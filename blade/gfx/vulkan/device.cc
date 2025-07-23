@@ -16,7 +16,7 @@ namespace blade
             std::optional<device> device::create(const struct instance& instance, create_options options) noexcept
             {
                 device device {};
-                device.allocator = instance.allocator;
+                device.allocator = instance.allocation_callbacks();
                 std::vector<const char*> device_extensions {};
 
                 if (options.use_swapchain)
@@ -173,7 +173,7 @@ namespace blade
                 VkPhysicalDevice* dummy_physical_devices = nullptr;
                 std::vector<VkPhysicalDevice> physical_devices {};
                 
-                vkEnumeratePhysicalDevices(instance.instance, &device_count, dummy_physical_devices);
+                vkEnumeratePhysicalDevices(instance.handle(), &device_count, dummy_physical_devices);
 
                 if (device_count == 0)
                 {
@@ -182,7 +182,7 @@ namespace blade
                 }
 
                 physical_devices.resize(device_count);
-                vkEnumeratePhysicalDevices(instance.instance, &device_count, physical_devices.data());
+                vkEnumeratePhysicalDevices(instance.handle(), &device_count, physical_devices.data());
 
                 // Thanks https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Physical_devices_and_queue_families
                 std::multimap<i32, VkPhysicalDevice> candidates {};

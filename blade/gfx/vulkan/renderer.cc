@@ -1,7 +1,15 @@
 #include "gfx/vulkan/renderer.h"
+#include "core/types.h"
 #include "gfx/handle.h"
 #include "gfx/view.h"
+#include "gfx/vulkan/common.h"
+#include "gfx/vulkan/platform.h"
+#include "gfx/vulkan/types.h"
+#include "gfx/vulkan/utils.h"
+#include <cstring>
+#include <optional>
 #include <utility>
+#include <vulkan/vulkan_core.h>
 
 namespace blade
 {
@@ -28,16 +36,96 @@ namespace blade
             {
                 logger::info("Initializing vulkan backend.");
 
-                auto instance_opt = instance::create();
-                _instance = instance_opt.value();
+                std::vector<const char*> extensions = {};
+                std::vector<const char*> validation_layers = {};
 
-                _instance.create_debug_messenger();
+                if (init.require_surface) 
+                {
+                    extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-                auto device_opt = device::create(_instance, { .use_swapchain = true });
-                _device = device_opt.value();
+                    auto platform_extensions = get_platform_extensions();
+                    for (const auto& ext : platform_extensions)
+                        extensions.push_back(ext);
+                }
+
+                // TODO: move to function
+                if (init.enable_debug)
+                {
+                    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+                    validation_layers = get_debug_validation_layers().value();
+                }
+
+                auto instance_opt = instance::builder()
+                    .set_engine_name("Blade Engine Name")
+                    .set_application_name("Blade Application Name")
+                    .set_engine_version(version { .major{1}, .minor{0}, .patch{0} })
+                    .require_api_version(version { .major{1}, .minor{3}, .patch{0} })
+                    .request_extensions(extensions)
+                    .request_validation_layers(validation_layers)
+                    .build();
+
+                // auto instance_opt = instance::create();
+                _instance = std::move(instance_opt.value());
+
+                // _instance.create_debug_messenger();
+
+                // auto device_opt = device::create(_instance, { .use_swapchain = true });
+                // _device = device_opt.value();
 
                 _is_initialized = true;
                 return true;
+            }
+
+            std::vector<const char*> vulkan_backend::get_platform_extensions() const noexcept
+            {
+                std::vector<const char*> extensions {};
+                #if defined(BLADE_PLATFORM_WINDOWS)
+                extensions.push_back("VK_KHR_Win32_surface");
+                #elif defined(BLADE_PLATFORM_LINUX)
+                // NOTE: if using xcb, use xcb rather than xlib
+                extensions.push_back("VK_KHR_xlib_surface");
+                #endif
+
+                return extensions;
+            }
+
+            std::optional<std::vector<const char*>> vulkan_backend::get_debug_validation_layers() const noexcept
+            {
+                std::vector<const char*> validation_layers { "VK_LAYER_KHRONOS_validation" };
+                std::vector<VkLayerProperties> available_layers {};
+                VkLayerProperties *dummy_layer_properties = nullptr;
+                u32 available_layer_count = 0;
+                
+
+                VK_ASSERT(vkEnumerateInstanceLayerProperties(&available_layer_count, dummy_layer_properties));
+                available_layers.resize(available_layer_count);
+                VK_ASSERT(vkEnumerateInstanceLayerProperties(&available_layer_count, available_layers.data()));
+
+                // TODO: move checking for validation layers into the instance::builder
+                for (const auto& layer : validation_layers)
+                {
+                    bool found_layer = false;
+                    logger::debug("Searching for validation layer {}", layer);
+
+                    for (const auto& available_layer : available_layers)
+                    {
+                        if (strcmp(layer, available_layer.layerName) == 0)
+                        {
+                            found_layer = true;
+                            logger::debug("Found.");
+                            break;
+                        }
+                    }
+
+                    if (!found_layer)
+                    {
+                        logger::error("Validation layer not found: {}", layer);
+                        return std::nullopt;
+                    }
+                }
+
+                return validation_layers;
             }
 
             bool vulkan_backend::shutdown() noexcept
@@ -51,9 +139,9 @@ namespace blade
                     logger::info("Destroyed view {}.", view.first.index);
                 }
 
-                _device.destroy();
+                // _device.destroy();
 
-                _instance.destroy_debug_messenger();
+                // _instance.destroy_debug_messenger();
                 _instance.destroy();
 
                 _is_initialized = false;

@@ -27,9 +27,9 @@ namespace blade
                 }
 
                 VK_ASSERT(vkCreateSurfaceKHR(
-                    instance.instance
+                    instance.handle()
                     , &surface_info
-                    , instance.allocator
+                    , instance.allocation_callbacks()
                     , &surface.vk_surface
                 ));
 
@@ -41,7 +41,7 @@ namespace blade
                 logger::info("Destroying vulkan surface...");
                 if (vk_surface != VK_NULL_HANDLE)
                 {
-                    vkDestroySurfaceKHR(instance.get().instance, vk_surface, instance.get().allocator);
+                    vkDestroySurfaceKHR(instance.get().handle(), vk_surface, instance.get().allocation_callbacks());
                 }
                 logger::info("Destroyed.");
             }

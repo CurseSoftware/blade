@@ -31,10 +31,16 @@ namespace blade
 
                         void destroy();
                     };
+                private:
+                    /// @brief Append platform-specific vulkan extensions to the list
+                    std::vector<const char*> get_platform_extensions() const noexcept;
+
+                    /// @brief Get the validation layer names
+                    std::optional<std::vector<const char*>> get_debug_validation_layers() const noexcept;
 
                 private:
                     bool _is_initialized { false };
-                    struct instance _instance {};
+                    instance _instance;
                     struct device _device {};
                     std::unordered_map<framebuffer_handle, view> _views {};
             };
