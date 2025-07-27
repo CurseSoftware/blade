@@ -1,4 +1,4 @@
-#include "gfx/vulkan/types.h"
+#include "gfx/vulkan/surface.h"
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/platform.h"
 #include "gfx/vulkan/utils.h"
@@ -15,7 +15,7 @@ namespace blade
                 framebuffer_create_info create_info
             ) {
                 logger::info("Creating vulkan surface.");
-                struct surface surface {instance};
+                struct surface surface { instance };
 
                 
                 VkSurfaceCreateInfo surface_info {};
@@ -24,7 +24,9 @@ namespace blade
                 if (create_info.native_window_data.has_value())
                 {
                     platform::set_surface_info(surface_info, create_info.native_window_data.value());
+                    logger::info("Got platform extensions");
                 }
+
 
                 VK_ASSERT(vkCreateSurfaceKHR(
                     instance.handle()
@@ -32,6 +34,8 @@ namespace blade
                     , instance.allocation_callbacks()
                     , &surface.vk_surface
                 ));
+
+                logger::info("Created.");
 
                 return surface;
             }

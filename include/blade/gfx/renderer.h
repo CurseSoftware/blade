@@ -42,7 +42,7 @@ namespace blade
             bool enable_debug { false };
 
             /** @brief Require a surface like a window to render to */
-            bool require_surface { false };
+            bool headless { false };
 
             /** @brief Resolution information */
             struct resolution resolution {};

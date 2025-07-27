@@ -27,7 +27,7 @@ namespace blade
                     struct view 
                     {
                         struct surface surface;
-                        std::optional<struct swapchain> swapchain;
+                        std::optional<class swapchain> swapchain;
 
                         void destroy();
                     };
@@ -41,7 +41,7 @@ namespace blade
                 private:
                     bool _is_initialized { false };
                     instance _instance;
-                    struct device _device {};
+                    std::unique_ptr<class device> _device;
                     std::unordered_map<framebuffer_handle, view> _views {};
             };
         } // vk namespace

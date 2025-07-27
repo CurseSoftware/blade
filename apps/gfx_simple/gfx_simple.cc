@@ -22,7 +22,7 @@ int main(void)
     init.resolution.height = 600;
     init.resolution.reset = gfx::resolution::reset::VSYNC;
     init.enable_debug = true;
-    init.require_surface = true;
+    init.headless = false;
 
     auto gfx = gfx::renderer::create(init);
     if (!gfx)
@@ -31,11 +31,11 @@ int main(void)
         return 1;
     }
 
-//    gfx->create_framebuffer({
-//        .native_window_data = window->get_window_handle(),
-//        .width = width,
-//        .height = height
-//    });
+    gfx->create_framebuffer({
+        .native_window_data = window->get_window_handle(),
+        .width = width,
+        .height = height
+    });
 
     gfx->shutdown();
 

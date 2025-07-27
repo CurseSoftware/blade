@@ -1,5 +1,5 @@
-#ifndef BLADE_GFX_VULKAN_INTANCE$a
-#define BLADE_GFX_VULKAN_INTANCE$a
+#ifndef BLADE_GFX_VULKAN_INTANCE
+#define BLADE_GFX_VULKAN_INTANCE
 
 #include "gfx/vulkan/common.h"
 #include <optional>
@@ -37,10 +37,15 @@ namespace blade
                     builder& request_default_validation_layers() noexcept;
                     builder& request_validation_layers(const std::vector<const char*>& layers) noexcept;
                     builder& request_extensions(const std::vector<const char*>& extensions) noexcept;
+                    builder& set_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept;
 
                     std::optional<instance> build() const noexcept;
 
                 private:
+                    bool validate_extensions_() const noexcept;
+
+                private:
+
                     struct
                     {
                         VkAllocationCallbacks *allocation_callbacks     { nullptr };
@@ -51,7 +56,7 @@ namespace blade
                         u32 api_version                                 { 0 };
                         std::vector<const char*> validation_layer_names {};
                         std::vector<const char*> extension_names        {};
-                    } info;
+                    } info {};
                 };
                 
                 [[nodiscard]] explicit instance(VkInstance instance) : _info{instance} {}
@@ -79,20 +84,29 @@ namespace blade
                     return *this;
                 }
 
+                /** 
+                 * @brief Enumerate available physical devices 
+                 * @return Vector of `VkPhysicalDevice` of available devices
+                 */
+                std::vector<VkPhysicalDevice> enumerate_physical_devices() const noexcept;
+
                 VkInstance handle() const { return _info.instance; }
                 VkAllocationCallbacks* allocation_callbacks() const { return _info.allocation_callbacks; }
 
+                void create_debug_messenger() noexcept;
+                void destroy_debug_messenger() noexcept;
                 void destroy() noexcept;
 
             private:
                 struct
                 {
-                    VkInstance instance              { VK_NULL_HANDLE };
+                    VkInstance instance                         { VK_NULL_HANDLE };
                     VkAllocationCallbacks *allocation_callbacks { nullptr };
-                } _info;
+                    VkDebugUtilsMessengerEXT debug_messenger;
+                } _info {};
             };
         } // vk namespace
     } // gfx namespace
 } // blade namespace
 
-#endif // BLADE_GFX_VULKAN_INTANCE$a
+#endif // BLADE_GFX_VULKAN_INTANCE

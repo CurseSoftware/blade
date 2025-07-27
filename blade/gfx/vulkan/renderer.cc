@@ -39,7 +39,7 @@ namespace blade
                 std::vector<const char*> extensions = {};
                 std::vector<const char*> validation_layers = {};
 
-                if (init.require_surface) 
+                if (!init.headless) 
                 {
                     extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
@@ -65,10 +65,22 @@ namespace blade
                     .request_validation_layers(validation_layers)
                     .build();
 
+
                 // auto instance_opt = instance::create();
                 _instance = std::move(instance_opt.value());
 
-                // _instance.create_debug_messenger();
+                auto builder = device::builder(_instance)
+                    .require_extension(VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+                    .set_allocation_callbacks(nullptr);
+
+                auto device_opt = builder.build();
+                
+                _device = std::make_unique<device>(std::move(device_opt.value()));
+
+                if (init.enable_debug)
+                {
+                    _instance.create_debug_messenger();
+                }
 
                 // auto device_opt = device::create(_instance, { .use_swapchain = true });
                 // _device = device_opt.value();
@@ -139,9 +151,12 @@ namespace blade
                     logger::info("Destroyed view {}.", view.first.index);
                 }
 
-                // _device.destroy();
+                if (_device)
+                {
+                    _device->destroy();
+                }
 
-                // _instance.destroy_debug_messenger();
+                _instance.destroy_debug_messenger();
                 _instance.destroy();
 
                 _is_initialized = false;
@@ -160,26 +175,36 @@ namespace blade
                     return framebuffer_handle{.index = BLADE_NULL_HANDLE};
                 }
 
-                auto surface = surface_opt.value();
+                auto surface = std::move(surface_opt.value());
 
                 vulkan_backend::view view = {
-                    .surface = surface
+                    .surface = std::move(surface)
                 };
 
                 if (create_info.native_window_data)
                 {
-                    swapchain::create_info swapchain_create_info {};
-                    swapchain_create_info.present_mode = present_mode::MAILBOX;
-                    swapchain_create_info.preferred_format = VK_FORMAT_B8G8R8A8_SRGB;
-                    swapchain_create_info.extent.width = create_info.width;
-                    swapchain_create_info.extent.height = create_info.height;
-                    
-                    view.swapchain = swapchain::create(surface, _device, swapchain_create_info);
+                    logger::info("Creating swapchain...");
+                    view.swapchain = swapchain::builder(*_device.get(), view.surface)
+                        .set_allocation_callbacks(nullptr)
+                        .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+                        .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+                        .set_clipped(VK_TRUE)
+                        .set_extent(create_info.width, create_info.height)
+                        .prefer_present_mode(present_mode::MAILBOX)
+                        .build();
+//                    swapchain::create_info swapchain_create_info {};
+//                    swapchain_create_info.present_mode = present_mode::MAILBOX;
+//                    swapchain_create_info.preferred_format = VK_FORMAT_B8G8R8A8_SRGB;
+//                    swapchain_create_info.extent.width = create_info.width;
+//                    swapchain_create_info.extent.height = create_info.height;
+//                    
+//                    view.swapchain = swapchain::create(surface, _device, swapchain_create_info);
                     if (!view.swapchain.has_value())
                     {
                         logger::error("Failed to create swapchain");
                         return framebuffer_handle{.index = BLADE_NULL_HANDLE};
                     }
+
                     logger::info("Swapchain created.");
                 }
 

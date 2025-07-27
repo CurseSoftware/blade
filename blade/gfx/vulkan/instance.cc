@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace blade
 {
@@ -26,6 +27,52 @@ namespace blade
                 if (info.allocation_callbacks)
                 {
                     instance._info.allocation_callbacks = info.allocation_callbacks;
+                }
+
+                if (!validate_extensions_())
+                {
+                    return std::nullopt;
+                }
+
+                if (info.validation_layer_names.size() > 0)
+                {
+                    u32 available_layer_count = 0;
+                    std::vector<VkLayerProperties> available_layers {};
+                    VkLayerProperties* dummy_layers = nullptr;
+
+                    VkResult result = vkEnumerateInstanceLayerProperties(&available_layer_count, dummy_layers);
+                    if (result != VK_SUCCESS)
+                    {
+                        return std::nullopt;
+                    }
+
+                    available_layers.resize(available_layer_count);
+                    result = vkEnumerateInstanceLayerProperties(&available_layer_count, available_layers.data());
+                    if (result != VK_SUCCESS)
+                    {
+                        return std::nullopt;
+                    }
+
+                    for (const auto& layer_name: info.validation_layer_names)
+                    {
+                        bool found = false;
+                        for (const auto& available_layer : available_layers)
+                        {
+                            if (strcmp(layer_name, available_layer.layerName) == 0)
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        if (!found)
+                        {
+                            logger::error("Validation layer {} is missing", layer_name);
+                            return std::nullopt;
+                        }
+                    }
+
+                    logger::info("Found all validation layers");
                 }
                 
                 VkApplicationInfo app_info {
@@ -65,6 +112,13 @@ namespace blade
 
                 return *this;
             }
+
+            instance::builder& instance::builder::set_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept
+            {
+                info.allocation_callbacks = callbacks;
+
+                return *this;
+            }
             
             instance::builder& instance::builder::set_engine_name(const char* engine_name) noexcept
             {
@@ -83,6 +137,13 @@ namespace blade
             instance::builder& instance::builder::request_extensions(const std::vector<const char*>& extensions) noexcept
             {
                 info.extension_names = extensions;
+
+                return *this;
+            }
+
+            instance::builder& instance::builder::enable_debug_messenger() noexcept
+            {
+                info.enable_validation = true;
 
                 return *this;
             }
@@ -113,6 +174,49 @@ namespace blade
 
                 return *this;
             }
+
+            bool instance::builder::validate_extensions_() const noexcept
+            {
+                u32 extension_count = 0;
+                VkExtensionProperties *dummy_properties = nullptr;
+                const char* layer_name = nullptr;
+                std::vector<VkExtensionProperties> available_extensions {};
+
+                logger::info("Validating required instance extensions...");
+                
+                VkResult result = vkEnumerateInstanceExtensionProperties(layer_name, &extension_count, dummy_properties);
+                if (result != VK_SUCCESS)
+                {
+                    return false;
+                }
+
+                available_extensions.resize(extension_count);
+                result = vkEnumerateInstanceExtensionProperties(layer_name, &extension_count, available_extensions.data());
+
+                for (const auto& extension_name : info.extension_names)
+                {
+                    bool found = false;
+                    logger::info("{}...", extension_name);
+                    for (const auto& available_extension : available_extensions)
+                    {
+                        if (strcmp(extension_name, available_extension.extensionName) == 0)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        logger::error("Required instance extension {} not found.", extension_name);
+                        return false;
+                    }
+                    logger::info("Found.");
+                }
+
+                logger::info("All required instnace extensions found.");
+                return true;
+            }
  
             void instance::destroy() noexcept
             {
@@ -123,6 +227,43 @@ namespace blade
                     logger::info("Destroyed.");
                 }
             }
+
+            std::vector<VkPhysicalDevice> instance::enumerate_physical_devices() const noexcept
+            {
+                VkPhysicalDevice* dummy_physical_device_list = nullptr;
+                std::vector<VkPhysicalDevice> physical_devices {};
+                u32 device_count = 0;
+
+                VkResult result = vkEnumeratePhysicalDevices(handle(), &device_count, dummy_physical_device_list);
+                if (result != VK_SUCCESS)
+                {
+                    logger::error("Error enumerating physical devices.");
+                    return physical_devices;
+                }
+
+                physical_devices.resize(device_count);
+
+                result = vkEnumeratePhysicalDevices(handle(), &device_count, physical_devices.data());
+                if (result != VK_SUCCESS)
+                {
+                    logger::error("Error enumerating physical devices.");
+                    return physical_devices;
+                }
+
+                return physical_devices;
+            }
+            void instance::destroy_debug_messenger() noexcept
+            {
+                if (_info.debug_messenger)
+                {
+                    logger::info("Destroying vulkan debug messenger...");
+                    PFN_vkDestroyDebugUtilsMessengerEXT func =
+                        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_info.instance, "vkDestroyDebugUtilsMessengerEXT");
+                    func(_info.instance, _info.debug_messenger, _info.allocation_callbacks);
+                    logger::info("Destroyed.");
+                }
+            }
+
 //            std::optional<struct instance> instance::create(VkAllocationCallbacks* allocator) noexcept
 //            {
 //                VkApplicationInfo app_info {
@@ -206,19 +347,6 @@ namespace blade
 //                return inst;
 //            }
 //
-//            void instance::destroy_debug_messenger() noexcept
-//            {
-//#ifdef BLADE_DEBUG
-//                if (debug_messenger)
-//                {
-//                    logger::info("Destroying vulkan debug messenger...");
-//                    PFN_vkDestroyDebugUtilsMessengerEXT func =
-//                        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-//                    func(instance, debug_messenger, allocator);
-//                    logger::info("Destroyed.");
-//                }
-//#endif
-//            }
 
         } // vk namespace
     } // gfx namespace
