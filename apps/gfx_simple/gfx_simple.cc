@@ -1,3 +1,4 @@
+#include "resources/fs.h"
 #include <blade/blade.h>
 
 namespace logger = blade::logger;
@@ -15,6 +16,27 @@ int main(void)
     );
 
     auto window = std::move(window_opt.value());
+
+    auto file_opt = blade::resources::fs::file::from_path(
+        "resources/builtin/shaders/simple.frag"
+        , blade::resources::fs::file_mode::read
+    );
+    if (!file_opt.has_value())
+    {
+        logger::error("COULD NOT OPEN FILE");
+    }
+    else
+    {
+        auto file = std::move(file_opt.value());
+        file.open();
+        auto contents = file.read_all();
+        if (!contents.has_value())
+        {
+            logger::error("COULD NOT READ FILE");
+        }
+        auto content = contents.value();
+        logger::trace("{}", std::string(content.get().begin(), content.get().end()));
+    }
 
     gfx::init_info init {};
     init.type = gfx::init_info::type::VULKAN;

@@ -21,6 +21,7 @@ endif()
 file(GLOB ASSEMBLY_SOURCES
     "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/*.cc"
     "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/core/*.cc"
+    "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/resources/*.cc"
     "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/window/*.cc"
     "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/gfx/*.cc"
     "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/gfx/vulkan/*.cc"

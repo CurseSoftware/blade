@@ -187,13 +187,9 @@ namespace blade
             {
                 VkSurfaceCapabilitiesKHR capabilities {};
                 auto handle = _info.physical_device.handle();
-                if (handle == VK_NULL_HANDLE)
-                    logger::error("PD is null");
 
-                logger::info("Device Name: {}", _info.physical_device.name());
-                if (surface.vk_surface == VK_NULL_HANDLE)
-                    logger::error("Surface null handle");
-                logger::info("SLDKFJ");
+                // TODO: check error value here
+                // potentially return std::optional from this
                 (void) vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
                     _info.physical_device.handle()
                     , surface.vk_surface
@@ -207,6 +203,9 @@ namespace blade
             {
                 u32 format_count = 0;
                 VkSurfaceFormatKHR* dummy_formats = nullptr;
+                
+                // TODO: check error value here
+                // potentially return std::optional from this
                 std::vector<VkSurfaceFormatKHR> formats {};
                 (void) vkGetPhysicalDeviceSurfaceFormatsKHR(
                     _info.physical_device.handle()
@@ -253,9 +252,7 @@ namespace blade
             
             void device::destroy() noexcept
             {
-                logger::info("Destroying vulkan device...");
                 vkDestroyDevice(_info.logical_device, _info.allocation_callbacks);
-                logger::info("Destroyed.");
             }
 
 //

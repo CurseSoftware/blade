@@ -1,0 +1,4 @@
+#ifndef BLADE_RESOURCES_H
+#define BLADE_RESOURCES_H
+
+#endif // BLADE_RESOURCES_H

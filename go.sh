@@ -26,6 +26,12 @@ go-Compile-Debug() {
     cmake --build build_release
 }
 
+go-Compile-Shaders() {
+    glslc resources/builtin/shaders/simple.vert -o simple.vert.spv
+    
+    glslc resources/builtin/shaders/simple.frag -o simple.frag.spv
+}
+
 go-Run-Example() {
     local example_name="$1"
     local build_type="${2:-Debug}"
