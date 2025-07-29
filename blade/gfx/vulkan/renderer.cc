@@ -4,6 +4,7 @@
 #include "gfx/view.h"
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/platform.h"
+#include "gfx/vulkan/shader.h"
 #include "gfx/vulkan/types.h"
 #include "gfx/vulkan/utils.h"
 #include <cstring>
@@ -144,6 +145,13 @@ namespace blade
             {
                 logger::info("Vulkan backend shutting down");
 
+                for (auto&& shader : _shaders)
+                {
+                    logger::info("Destroying shader...");
+                    shader.second.destroy();
+                    logger::info("Destroyed.");
+                }
+
                 for (auto&& view : _views)
                 {
                     logger::info("Destroying view: {}", view.first.index);
@@ -214,6 +222,29 @@ namespace blade
                 framebuffer_handle_id += 1;
                 
                 logger::info("Created framebuffer.");
+                return handle;
+            }
+
+            shader_handle vulkan_backend::create_shader(const std::vector<u8>& mem) noexcept
+            {
+                static u16 shader_handle_id = 1;
+                const auto shader_opt = shader::builder(*_device)
+                    .use_allocation_callbacks(nullptr)
+                    .set_code(mem)
+                    .build();
+
+                if (!shader_opt.has_value())
+                {
+                    return  { BLADE_NULL_HANDLE };
+                }
+
+                auto shader = shader_opt.value();
+
+                shader_handle handle { .index = shader_handle_id };
+                _shaders.insert(std::make_pair(handle, shader));
+
+                shader_handle_id += 1;
+
                 return handle;
             }
 

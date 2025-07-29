@@ -24,6 +24,8 @@ namespace blade
                     void frame() noexcept override;
                     framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept override;
 
+                    shader_handle create_shader(const std::vector<u8>& mem) noexcept override;
+
                     struct view 
                     {
                         struct surface surface;
@@ -43,6 +45,7 @@ namespace blade
                     instance _instance;
                     std::unique_ptr<class device> _device;
                     std::unordered_map<framebuffer_handle, view> _views {};
+                    std::unordered_map<shader_handle, shader> _shaders {};
             };
         } // vk namespace
     } // gfx namespace

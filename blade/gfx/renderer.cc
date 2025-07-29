@@ -39,14 +39,24 @@ namespace blade
             return nullptr;
         }
 
-        framebuffer_handle renderer::create_framebuffer(framebuffer_create_info info)
+        framebuffer_handle renderer::create_framebuffer(framebuffer_create_info info) noexcept
         {
             if (_backend)
             {
                 return _backend->create_framebuffer(info);
             }
 
-            return framebuffer_handle { .index = BLADE_NULL_HANDLE };
+            return framebuffer_handle { BLADE_NULL_HANDLE };
+        }
+
+        shader_handle renderer::create_shader(const std::vector<u8>& data) noexcept
+        {
+            if (_backend)
+            {
+                return _backend->create_shader(data);
+            }
+
+            return shader_handle { BLADE_NULL_HANDLE };
         }
 
         void renderer::shutdown() noexcept

@@ -1,6 +1,7 @@
 #ifndef BLADE_RESOURCES_FS_H
 #define BLADE_RESOURCES_FS_H
 
+#include "core/defines.h"
 #include "core/types.h"
 #include <fstream>
 #include <ios>
@@ -25,6 +26,10 @@ namespace blade
                 read_write_binary
             };
 
+#if defined(BLADE_PLATFORM_LINUX) || defined(BLADE_PLATFORM_WINDOWS) || defined(BLADE_PLATFORM_MACOS)
+            using file_handle = std::fstream;
+#endif
+            
             inline std::ios::openmode to_ios_openmode(const file_mode mode) noexcept
             {
                 switch (mode)
@@ -59,17 +64,11 @@ namespace blade
             {
                 public:
                     static std::optional<file> from_path(const char* path, const file_mode mode) noexcept;
-
+                    
+                    std::optional<std::vector<u8>> read_all() noexcept;
+                    
                     bool open() noexcept;
                     void close() noexcept;
-                    bool read_line() noexcept;
-                    bool write_line() noexcept;
-
-                    /**
-                     * @brief Read the entire contents of the file. If file is already completely read, then returns those contents.
-                     * @return `Some(std::reference_wrapper<std::vector<u8>>)` if read successfully. `std::nullopt` otherwise.
-                     */
-                    std::optional<std::reference_wrapper<std::vector<u8>>> read_all() noexcept;
 
                     bool is_open() const noexcept;
 
@@ -109,6 +108,9 @@ namespace blade
                             || _mode == file_mode::append_binary
                         ;
                     }
+
+                    std::string path() const noexcept { return _path; }
+
                 
                 private:
                     [[nodiscard]] explicit file() noexcept {}

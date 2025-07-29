@@ -63,7 +63,7 @@ namespace blade
                 }
             }
 
-            std::optional<std::reference_wrapper<std::vector<u8>>> file::read_all() noexcept
+            std::optional<std::vector<u8>> file::read_all() noexcept
             {
                 if (!is_open())
                 {

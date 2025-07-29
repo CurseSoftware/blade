@@ -58,6 +58,7 @@ namespace blade
                 virtual bool shutdown() noexcept = 0;
                 virtual void frame() noexcept = 0;
                 virtual framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept = 0;
+                virtual shader_handle create_shader(const std::vector<u8>& mem) noexcept = 0;
 
                 // TODO: other renderer backend methods
             
@@ -72,7 +73,9 @@ namespace blade
 
                 void shutdown() noexcept;
 
-                framebuffer_handle create_framebuffer(framebuffer_create_info create_info);
+                framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept;
+
+                shader_handle create_shader(const std::vector<u8>& mem) noexcept;
                 
 
             private:

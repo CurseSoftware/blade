@@ -2,6 +2,7 @@
 #define BLADE_BLADE_H
 
 #include "core/core.h"
+#include "resources/resources.h"
 #include "window/window.h"
 #include "gfx/gfx.h"
 

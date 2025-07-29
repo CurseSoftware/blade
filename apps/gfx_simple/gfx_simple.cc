@@ -1,8 +1,8 @@
-#include "resources/fs.h"
 #include <blade/blade.h>
 
 namespace logger = blade::logger;
 namespace gfx = blade::gfx;
+namespace fs = blade::resources::fs;
 
 int main(void)
 {
@@ -16,27 +16,6 @@ int main(void)
     );
 
     auto window = std::move(window_opt.value());
-
-    auto file_opt = blade::resources::fs::file::from_path(
-        "resources/builtin/shaders/simple.frag"
-        , blade::resources::fs::file_mode::read
-    );
-    if (!file_opt.has_value())
-    {
-        logger::error("COULD NOT OPEN FILE");
-    }
-    else
-    {
-        auto file = std::move(file_opt.value());
-        file.open();
-        auto contents = file.read_all();
-        if (!contents.has_value())
-        {
-            logger::error("COULD NOT READ FILE");
-        }
-        auto content = contents.value();
-        logger::trace("{}", std::string(content.get().begin(), content.get().end()));
-    }
 
     gfx::init_info init {};
     init.type = gfx::init_info::type::VULKAN;
@@ -53,12 +32,39 @@ int main(void)
         return 1;
     }
 
-    gfx->create_framebuffer({
+    auto frame = gfx->create_framebuffer({
         .native_window_data = window->get_window_handle(),
         .width = width,
         .height = height
     });
 
+    auto vert_opt = fs::file::from_path("simple.vert.spv", fs::file_mode::read);
+    auto frag_opt = fs::file::from_path("simple.frag.spv", fs::file_mode::read);
+
+    if (!vert_opt.has_value())
+    {
+        logger::error("Vertex file not read properly");
+        return 1;
+    }
+    
+    if (!frag_opt.has_value())
+    {
+        logger::error("Vertex file not read properly");
+        return 1;
+    }
+
+    auto vert_file = std::move(vert_opt.value());
+    auto frag_file = std::move(frag_opt.value());
+
+    vert_file.open();
+    frag_file.open();
+
+    auto vert_code = vert_file.read_all().value();
+    auto frag_code = frag_file.read_all().value();
+
+    auto vert_handle = gfx->create_shader(vert_code);
+    auto frag_handle = gfx->create_shader(frag_code);
+    
     gfx->shutdown();
 
     logger::info("GFX Example");
