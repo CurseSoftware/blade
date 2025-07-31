@@ -68,7 +68,7 @@ namespace blade
 
 
                 // auto instance_opt = instance::create();
-                _instance = std::move(instance_opt.value());
+                _instance = std::make_shared<class instance>(std::move(instance_opt.value()));
 
                 auto builder = device::builder(_instance)
                     .require_extension(VK_KHR_SWAPCHAIN_EXTENSION_NAME)
@@ -76,11 +76,11 @@ namespace blade
 
                 auto device_opt = builder.build();
                 
-                _device = std::make_unique<device>(std::move(device_opt.value()));
+                _device = device_opt.value();
 
                 if (init.enable_debug)
                 {
-                    _instance.create_debug_messenger();
+                    _instance->create_debug_messenger();
                 }
 
                 // auto device_opt = device::create(_instance, { .use_swapchain = true });
@@ -164,8 +164,8 @@ namespace blade
                     _device->destroy();
                 }
 
-                _instance.destroy_debug_messenger();
-                _instance.destroy();
+                _instance->destroy_debug_messenger();
+                _instance->destroy();
 
                 _is_initialized = false;
                 return true;
@@ -183,16 +183,16 @@ namespace blade
                     return framebuffer_handle{.index = BLADE_NULL_HANDLE};
                 }
 
-                auto surface = std::move(surface_opt.value());
+                auto surface = surface_opt.value();
 
                 vulkan_backend::view view = {
-                    .surface = std::move(surface)
+                    .surface = surface
                 };
 
                 if (create_info.native_window_data)
                 {
                     logger::info("Creating swapchain...");
-                    view.swapchain = swapchain::builder(*_device.get(), view.surface)
+                    view.swapchain = swapchain::builder(_device, view.surface)
                         .set_allocation_callbacks(nullptr)
                         .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
                         .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
@@ -200,6 +200,13 @@ namespace blade
                         .set_extent(create_info.width, create_info.height)
                         .prefer_present_mode(present_mode::MAILBOX)
                         .build();
+
+                    if (!view.swapchain.has_value())
+                    {
+                        logger::error("Failed to create swapchain");
+                        return framebuffer_handle{.index = BLADE_NULL_HANDLE};
+                    }
+
 //                    swapchain::create_info swapchain_create_info {};
 //                    swapchain_create_info.present_mode = present_mode::MAILBOX;
 //                    swapchain_create_info.preferred_format = VK_FORMAT_B8G8R8A8_SRGB;
@@ -256,9 +263,9 @@ namespace blade
             {
                 if (swapchain.has_value())
                 {
-                    swapchain.value().destroy();
+                    swapchain.value()->destroy();
                 }
-                surface.destroy();
+                surface->destroy();
             }
         } // vk namespace
     } // gfx namespace

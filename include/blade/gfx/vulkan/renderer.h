@@ -28,8 +28,8 @@ namespace blade
 
                     struct view 
                     {
-                        struct surface surface;
-                        std::optional<class swapchain> swapchain;
+                        std::shared_ptr<struct surface> surface;
+                        std::optional<std::unique_ptr<class swapchain>> swapchain;
 
                         void destroy();
                     };
@@ -42,8 +42,8 @@ namespace blade
 
                 private:
                     bool _is_initialized { false };
-                    instance _instance;
-                    std::unique_ptr<class device> _device;
+                    std::shared_ptr<instance> _instance;
+                    std::shared_ptr<class device> _device;
                     std::unordered_map<framebuffer_handle, view> _views {};
                     std::unordered_map<shader_handle, shader> _shaders {};
             };

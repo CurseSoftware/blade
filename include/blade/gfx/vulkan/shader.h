@@ -50,8 +50,15 @@ namespace blade
                      */
                     static std::unique_ptr<shader> from_file(const resources::fs::file& file) noexcept;
 
+                    /**
+                     * @brief Get handle to inner shader module
+                     * @return `VkShaderModule` handle
+                     */
                     const VkShaderModule handle() const noexcept { return _shader_module; }
 
+                    /**
+                     * @brief Destroy the shader module
+                     */
                     void destroy() noexcept;
                 private:
                     [[nodiscard]] explicit shader(const class device& device) noexcept 
@@ -59,9 +66,9 @@ namespace blade
                     {}
 
                 private:
-
                     std::vector<u8> _data {};
                     VkShaderModule _shader_module { VK_NULL_HANDLE };
+                    VkPipelineShaderStageCreateInfo _pipeline_info {};
                     const class device& _device;
                     VkAllocationCallbacks* _callbacks { nullptr };
             };

@@ -4,6 +4,7 @@
 #include "gfx/view.h"
 #include "gfx/vulkan/common.h"
 #include <functional>
+#include <memory>
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
@@ -15,7 +16,9 @@ namespace blade
         {
             struct surface
             {
-                [[nodiscard]] explicit surface(const struct instance& instance) : instance{instance} {}
+                [[nodiscard]] explicit surface(std::weak_ptr<const struct instance> instance) noexcept
+                    : instance{instance} 
+                {}
 
                 surface(const surface& other) = delete;
                 surface& operator=(const surface& other) = delete;
@@ -39,12 +42,15 @@ namespace blade
                     return *this;
                 }
                 
-                static std::optional<surface> create(const struct instance& instance, framebuffer_create_info create_info);
+                static std::optional<std::shared_ptr<surface>> create(
+                    std::weak_ptr<const struct instance> instance
+                    , framebuffer_create_info create_info
+                );
 
                 void destroy();
 
-                std::reference_wrapper<const struct instance> instance;
-                VkSurfaceKHR vk_surface { VK_NULL_HANDLE };
+                std::weak_ptr<const struct instance> instance {};
+                VkSurfaceKHR vk_surface                       { VK_NULL_HANDLE };
             };
 
         } // vk namespace

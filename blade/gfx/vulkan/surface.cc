@@ -10,12 +10,12 @@ namespace blade
         namespace vk
         {
 
-            std::optional<surface> surface::create(
-                const struct instance& instance,
+            std::optional<std::shared_ptr<surface>> surface::create(
+                std::weak_ptr<const struct instance> instance,
                 framebuffer_create_info create_info
             ) {
                 logger::info("Creating vulkan surface.");
-                struct surface surface { instance };
+                auto surface = std::make_shared<struct surface>(instance);
 
                 
                 VkSurfaceCreateInfo surface_info {};
@@ -29,10 +29,10 @@ namespace blade
 
 
                 VK_ASSERT(vkCreateSurfaceKHR(
-                    instance.handle()
+                    instance.lock()->handle()
                     , &surface_info
-                    , instance.allocation_callbacks()
-                    , &surface.vk_surface
+                    , instance.lock()->allocation_callbacks()
+                    , &surface->vk_surface
                 ));
 
                 logger::info("Created.");
@@ -45,7 +45,7 @@ namespace blade
                 logger::info("Destroying vulkan surface...");
                 if (vk_surface != VK_NULL_HANDLE)
                 {
-                    vkDestroySurfaceKHR(instance.get().handle(), vk_surface, instance.get().allocation_callbacks());
+                    vkDestroySurfaceKHR(instance.lock()->handle(), vk_surface, instance.lock()->allocation_callbacks());
                 }
                 logger::info("Destroyed.");
             }

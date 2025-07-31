@@ -3,9 +3,9 @@
 
 #include "gfx/vulkan/common.h"
 #include <functional>
+#include <memory>
 #include <optional>
 #include <utility>
-#include <vulkan/vulkan_core.h>
 
 namespace blade
 {
@@ -159,11 +159,11 @@ namespace blade
                 public:
                     struct builder
                     {
-                        [[nodiscard]] explicit builder(const class instance& instance) noexcept 
-                            : info{ .instance = instance } 
+                        [[nodiscard]] explicit builder(std::weak_ptr<class instance> instance) noexcept 
+                            : info { instance }
                         {}
 
-                        std::optional<device> build() const noexcept;
+                        std::optional<std::shared_ptr<device>> build() const noexcept;
 
                         builder& set_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept;
                         builder& require_features(VkPhysicalDeviceFeatures physical_device_features) noexcept;
@@ -172,7 +172,7 @@ namespace blade
 
                         struct
                         {
-                            const class instance& instance;
+                            std::weak_ptr<const class instance> instance {};
                             std::vector<const char*> required_extensions {};
                             VkPhysicalDeviceFeatures physical_device_features {};
                             VkAllocationCallbacks* allocation_callbacks       { nullptr };
@@ -185,15 +185,15 @@ namespace blade
                         } info;
 
                         private:
-                            std::vector<physical_device> find_valid_devices_() const noexcept;
+                            std::vector<std::shared_ptr<physical_device>> find_valid_devices_() const noexcept;
                     };
                     
-                    device(class device&& other) noexcept : _info { std::move(other._info.physical_device) } 
+                    device(class device&& other) noexcept
                     {
                         if (this != &other)
                         {
-                            _info.physical_device = std::move(other._info.physical_device);
-                            _info.logical_device = std::exchange(other._info.logical_device, VK_NULL_HANDLE);
+                            _physical_device = std::move(other._physical_device);
+                            _logical_device = std::exchange(other._logical_device, VK_NULL_HANDLE);
                         }
                     }
                     
@@ -201,15 +201,15 @@ namespace blade
                     {
                         if (this != &other)
                         {
-                            _info.physical_device = std::move(other._info.physical_device);
-                            _info.logical_device = std::exchange(other._info.logical_device, VK_NULL_HANDLE);
+                            _physical_device = std::move(other._physical_device);
+                            _logical_device = std::exchange(other._logical_device, VK_NULL_HANDLE);
                         }
 
                         return *this;
                     }
 
-                    std::optional<u32> graphics_queue_index() const noexcept { return _info.physical_device.graphics_queue_index(); }
-                    std::optional<u32> present_queue_index(const struct surface& surface) noexcept { return _info.physical_device.present_queue_index(surface); }
+                    std::optional<u32> graphics_queue_index() const noexcept { return _physical_device->graphics_queue_index(); }
+                    std::optional<u32> present_queue_index(const struct surface& surface) noexcept { return _physical_device->present_queue_index(surface); }
 
                     std::optional<VkQueue> get_present_queue(VkSurfaceKHR surface) const noexcept;
                     std::optional<VkQueue> get_queue(const queue_type type) const noexcept;
@@ -218,14 +218,14 @@ namespace blade
                     const std::vector<VkSurfaceFormatKHR> surface_formats(const struct surface&) const noexcept;
                     const std::vector<VkPresentModeKHR> surface_present_modes(const struct surface&) const noexcept;
 
-                    const VkDevice handle() const noexcept { return _info.logical_device; }
-                    const physical_device& get_physical_device() const noexcept { return _info.physical_device; }
+                    const VkDevice handle() const noexcept { return _logical_device; }
+                    const std::weak_ptr<const physical_device> get_physical_device() const noexcept { return _physical_device; }
 
                     void destroy() noexcept;
 
                 
+                    [[nodiscard]] explicit device(std::shared_ptr<physical_device> physical_device) :  _physical_device { physical_device } {}
                 private:
-                    [[nodiscard]] explicit device(physical_device physical_device) : _info { std::move(physical_device) } {}
                     
                     device(const device&) = delete;
                     device& operator=(const device&) = delete;
@@ -233,12 +233,9 @@ namespace blade
                     std::optional<u32> get_queue_index_(const queue_type type) const noexcept;
 
                 private:
-                    struct
-                    {
-                        class physical_device physical_device;
-                        VkDevice logical_device                     { VK_NULL_HANDLE };
-                        VkAllocationCallbacks* allocation_callbacks { nullptr };
-                    } _info;
+                    std::shared_ptr<physical_device> _physical_device       { nullptr };
+                    VkDevice _logical_device                                { VK_NULL_HANDLE };
+                    VkAllocationCallbacks* _allocation_callbacks            { nullptr };
             };
 
         } // vk namespace

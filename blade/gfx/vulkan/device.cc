@@ -17,9 +17,9 @@ namespace blade
     {
         namespace vk
         {
-            std::optional<device> device::builder::build() const noexcept
+            std::optional<std::shared_ptr<device>> device::builder::build() const noexcept
             {
-                std::vector<physical_device> valid_devices = find_valid_devices_();
+                std::vector<std::shared_ptr<physical_device>> valid_devices = find_valid_devices_();
                 if (valid_devices.empty())
                 {
                     logger::error("No valid devices from specified requirements");
@@ -28,8 +28,9 @@ namespace blade
 
                 // TODO: better device selection of remaining ones
                 // physical_device selected_physical_device = std::move(valid_devices[0]);
-                device device (std::move(valid_devices[0]));
-                std::vector<VkDeviceQueueCreateInfo> queue_infos = device._info.physical_device.get_queue_family_infos();
+                auto device = std::make_shared<class device>(valid_devices[0]);
+                // device device (std::move(valid_devices[0]));
+                std::vector<VkDeviceQueueCreateInfo> queue_infos = device->_physical_device->get_queue_family_infos();
                 
                 VkDeviceCreateInfo create_info {
                     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -37,14 +38,14 @@ namespace blade
                     .pQueueCreateInfos = queue_infos.data(),
                     .enabledExtensionCount = static_cast<u32>(info.required_extensions.size()),
                     .ppEnabledExtensionNames = info.required_extensions.data(),
-                    .pEnabledFeatures = device._info.physical_device.get_features_ptr()
+                    .pEnabledFeatures = device->_physical_device->get_features_ptr()
                 };
 
                 VkResult result = vkCreateDevice(
-                    device._info.physical_device.handle()
+                    device->_physical_device->handle()
                     , &create_info
                     , info.allocation_callbacks
-                    , &device._info.logical_device
+                    , &device->_logical_device
                 );
 
                 if (result != VK_SUCCESS)
@@ -93,47 +94,47 @@ namespace blade
                 return *this;
             }
 
-            std::vector<physical_device> device::builder::find_valid_devices_() const noexcept
+            std::vector<std::shared_ptr<physical_device>> device::builder::find_valid_devices_() const noexcept
             {
-                auto vk_physical_devices = info.instance.enumerate_physical_devices();
-                std::vector<physical_device> physical_devices {};
+                auto vk_physical_devices = info.instance.lock()->enumerate_physical_devices();
+                std::vector<std::shared_ptr<physical_device>> physical_devices {};
                 for (const auto& device : vk_physical_devices)
                 {
-                    physical_device pd(device);
-                    physical_devices.push_back(std::move(pd));
+                    auto pd = std::make_shared<physical_device>(device);
+                    physical_devices.push_back(pd);
                 }
 
-                std::erase_if(physical_devices, [this](physical_device& device) -> bool {
+                std::erase_if(physical_devices, [this](std::shared_ptr<physical_device> device) -> bool {
                     constexpr bool should_erase = true;
                     constexpr bool should_not_erase = false;
 
-                    logger::info("Checking device {}", device.name());
+                    logger::info("Checking device {}", device->name());
 
                     for (auto extension : info.required_extensions)
                     {
                         logger::info("Checking extension {}", extension);
-                        if (!device.extension_is_supported(extension))
+                        if (!device->extension_is_supported(extension))
                         {
-                            logger::info("Physical Device {} does not support required extension {}. Removing.", device.name(), extension);
+                            logger::info("Physical Device {} does not support required extension {}. Removing.", device->name(), extension);
                             return should_erase;
                         }
-                        logger::info("Physical Device {} supports required extension {}", device.name(), extension);
+                        logger::info("Physical Device {} supports required extension {}", device->name(), extension);
 
-                        if (info.require_graphics_queue && !device.graphics_queue_index().has_value())
+                        if (info.require_graphics_queue && !device->graphics_queue_index().has_value())
                         {
-                            logger::info("Physical Device {} does not have required graphics queue. Removing.", device.name());
+                            logger::info("Physical Device {} does not have required graphics queue. Removing.", device->name());
                             return should_erase;
                         }
                         
-                        if (info.require_transfer_queue && !device.transfer_queue_index().has_value())
+                        if (info.require_transfer_queue && !device->transfer_queue_index().has_value())
                         {
-                            logger::info("Physical Device {} does not have required transfer queue. Removing.", device.name());
+                            logger::info("Physical Device {} does not have required transfer queue. Removing.", device->name());
                             return should_erase;
                         }
                         
-                        if (info.require_compute_queue && !device.compute_queue_index().has_value())
+                        if (info.require_compute_queue && !device->compute_queue_index().has_value())
                         {
-                            logger::info("Physical Device {} does not have required compute queue. Removing.", device.name());
+                            logger::info("Physical Device {} does not have required compute queue. Removing.", device->name());
                             return should_erase;
                         }
 
@@ -157,7 +158,7 @@ namespace blade
                 u32 index = index_opt.value();
 
                 vkGetDeviceQueue(
-                    _info.logical_device
+                    _logical_device
                     , index
                     , queue_index
                     , &queue
@@ -171,11 +172,11 @@ namespace blade
                 switch(type)
                 {
                     case queue_type::graphics:
-                        return _info.physical_device.graphics_queue_index();
+                        return _physical_device->graphics_queue_index();
                     case queue_type::compute:
-                        return _info.physical_device.compute_queue_index();
+                        return _physical_device->compute_queue_index();
                     case queue_type::transfer:
-                        return _info.physical_device.transfer_queue_index();
+                        return _physical_device->transfer_queue_index();
                     default:
                         return std::nullopt;
                 }
@@ -186,12 +187,12 @@ namespace blade
             VkSurfaceCapabilitiesKHR device::surface_capabilities(const struct surface& surface) const noexcept
             {
                 VkSurfaceCapabilitiesKHR capabilities {};
-                auto handle = _info.physical_device.handle();
+                auto handle = _physical_device->handle();
 
                 // TODO: check error value here
                 // potentially return std::optional from this
                 (void) vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-                    _info.physical_device.handle()
+                    _physical_device->handle()
                     , surface.vk_surface
                     , &capabilities 
                 );
@@ -208,7 +209,7 @@ namespace blade
                 // potentially return std::optional from this
                 std::vector<VkSurfaceFormatKHR> formats {};
                 (void) vkGetPhysicalDeviceSurfaceFormatsKHR(
-                    _info.physical_device.handle()
+                    _physical_device->handle()
                     , surface.vk_surface
                     , &format_count
                     , dummy_formats
@@ -217,7 +218,7 @@ namespace blade
                 formats.resize(format_count);
 
                 (void) vkGetPhysicalDeviceSurfaceFormatsKHR(
-                    _info.physical_device.handle()
+                    _physical_device->handle()
                     , surface.vk_surface
                     , &format_count
                     , formats.data()
@@ -233,7 +234,7 @@ namespace blade
                 std::vector<VkPresentModeKHR> present_modes {};
 
                 vkGetPhysicalDeviceSurfacePresentModesKHR(
-                    _info.physical_device.handle()
+                    _physical_device->handle()
                     , surface.vk_surface
                     , &present_mode_count
                     , dummy_present_modes
@@ -241,7 +242,7 @@ namespace blade
 
                 present_modes.resize(present_mode_count);
                 vkGetPhysicalDeviceSurfacePresentModesKHR(
-                    _info.physical_device.handle()
+                    _physical_device->handle()
                     , surface.vk_surface
                     , &present_mode_count
                     , present_modes.data() 
@@ -252,7 +253,7 @@ namespace blade
             
             void device::destroy() noexcept
             {
-                vkDestroyDevice(_info.logical_device, _info.allocation_callbacks);
+                vkDestroyDevice(_logical_device, _allocation_callbacks);
             }
 
 //

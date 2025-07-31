@@ -13,16 +13,17 @@ namespace blade
     {
         namespace vk
         {
-            std::optional<swapchain> swapchain::builder::build() const noexcept
+            std::optional<std::unique_ptr<swapchain>> swapchain::builder::build() const noexcept
             {
-                swapchain swapchain { info.device };
+                auto swapchain = std::make_unique<class swapchain>(info.device);
+                
                 const u32 num_image_array_layers = 1;
-                const VkSurfaceCapabilitiesKHR capabilities = info.device.get().surface_capabilities(info.surface.get());
-                const auto formats = info.device.get().surface_formats(info.surface.get());
-                const auto present_modes = info.device.get().surface_present_modes(info.surface.get());
+                const VkSurfaceCapabilitiesKHR capabilities = info.device.lock()->surface_capabilities(*info.surface.lock());
+                const auto formats = info.device.lock()->surface_formats(*info.surface.lock());
+                const auto present_modes = info.device.lock()->surface_present_modes(*info.surface.lock());
 
-                auto graphics_queue_index_opt = info.device.get().graphics_queue_index();
-                auto present_queue_index_opt = info.device.get().present_queue_index(info.surface);
+                auto graphics_queue_index_opt = info.device.lock()->graphics_queue_index();
+                auto present_queue_index_opt = info.device.lock()->present_queue_index(*info.surface.lock());
 
                 if (!graphics_queue_index_opt.has_value())
                 {
@@ -72,7 +73,7 @@ namespace blade
 
                 VkSwapchainCreateInfoKHR create_info {
                     .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-                    .surface = info.surface.get().vk_surface,
+                    .surface = info.surface.lock()->vk_surface,
                     .minImageCount = image_count,
                     .imageFormat = selected_format.format,
                     .imageColorSpace = selected_format.colorSpace,
@@ -99,10 +100,10 @@ namespace blade
                 create_info.oldSwapchain = info.old_swapchain;
 
                 const VkResult create_result = vkCreateSwapchainKHR(
-                    info.device.get().handle()
+                    info.device.lock()->handle()
                     , &create_info
                     , info.allocation_callbacks
-                    , &swapchain._info.swapchain
+                    , &swapchain->_swapchain
                 );
 
                 if (create_result != VK_SUCCESS)
@@ -111,25 +112,25 @@ namespace blade
                     return std::nullopt;
                 }
                 
-                swapchain._info.format = selected_format.format;
-                swapchain._info.extent = selected_extent;
-                swapchain._info.allocation_callbacks = info.allocation_callbacks;
+                swapchain->_format = selected_format.format;
+                swapchain->_extent = selected_extent;
+                swapchain->_allocation_callbacks = info.allocation_callbacks;
 
-                auto images_opt = swapchain.create_images_();
+                auto images_opt = swapchain->create_images_();
                 if (!images_opt.has_value())
                 {
                     logger::error("Failed to create images");
                     return std::nullopt;
                 }
-                swapchain._info.images = images_opt.value();
+                swapchain->_images = images_opt.value();
 
-                auto image_views_opt = swapchain.create_image_views_();
+                auto image_views_opt = swapchain->create_image_views_();
                 if (!image_views_opt.has_value())
                 {
                     logger::error("Failed to create image views");
                     return std::nullopt;
                 }
-                swapchain._info.image_views = image_views_opt.value();
+                swapchain->_image_views = image_views_opt.value();
 
                 return std::move(swapchain);
             }
@@ -245,8 +246,8 @@ namespace blade
                 VkImage* dummy_images = nullptr;
 
                 VkResult result = vkGetSwapchainImagesKHR(
-                    _info.device.get().handle()
-                    , _info.swapchain
+                    _device.lock()->handle()
+                    , _swapchain
                     , &image_count
                     , dummy_images
                 );
@@ -259,8 +260,8 @@ namespace blade
                 images.resize(image_count);
                 
                 result = vkGetSwapchainImagesKHR(
-                    _info.device.get().handle()
-                    , _info.swapchain
+                    _device.lock()->handle()
+                    , _swapchain
                     , &image_count
                     , images.data()
                 );
@@ -342,25 +343,25 @@ namespace blade
 
             std::optional<std::vector<VkImageView>> swapchain::create_image_views_() const noexcept
             {
-                if (_info.images.size() == 0)
+                if (_images.size() == 0)
                 {
                     return std::nullopt;
                 }
                 
                 std::vector<VkImageView> image_views {};
-                image_views.resize(_info.images.size());
+                image_views.resize(_images.size());
                 u32 base_mip_level = 0;
                 u32 level_count = 1;
                 u32 base_array_layer = 0;
                 u32 layer_count = 1;
 
-                for (usize i = 0; i < _info.images.size(); i++)
+                for (usize i = 0; i < _images.size(); i++)
                 {
                     VkImageViewCreateInfo create_info {
                         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-                        .image = _info.images[i],
+                        .image = _images[i],
                         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-                        .format = _info.format,
+                        .format = _format,
                     };
 
                     create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -375,9 +376,9 @@ namespace blade
                     create_info.subresourceRange.layerCount = layer_count;
 
                     VkResult result = vkCreateImageView(
-                        _info.device.get().handle()
+                        _device.lock()->handle()
                         , &create_info
-                        , _info.allocation_callbacks
+                        , _allocation_callbacks
                         , &image_views[i]
                     );
 
@@ -394,13 +395,13 @@ namespace blade
             {
                 logger::info("Destroying swapchain...");
 
-                for (auto image_view : _info.image_views)
+                for (auto image_view : _image_views)
                 {
                     logger::info("Destroying image view...");
-                    vkDestroyImageView(_info.device.get().handle(), image_view, _info.allocation_callbacks);
+                    vkDestroyImageView(_device.lock()->handle(), image_view, _allocation_callbacks);
                     logger::info("Destroyed.");
                 }
-                vkDestroySwapchainKHR(_info.device.get().handle(), _info.swapchain, _info.allocation_callbacks);
+                vkDestroySwapchainKHR(_device.lock()->handle(), _swapchain, _allocation_callbacks);
                 logger::info("Destroyed.");
             }
             

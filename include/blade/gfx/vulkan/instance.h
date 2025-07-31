@@ -3,6 +3,7 @@
 
 #include "gfx/vulkan/common.h"
 #include <optional>
+#include <memory>
 #include <utility>
 #include <vulkan/vulkan_core.h>
 

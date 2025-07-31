@@ -4,6 +4,7 @@
 #include "gfx/vulkan/device.h"
 #include "gfx/vulkan/surface.h"
 #include <functional>
+#include <memory>
 #include <vulkan/vulkan_core.h>
 
 namespace blade
@@ -50,11 +51,14 @@ namespace blade
                     class builder
                     {
                         public:
-                            [[nodiscard]] explicit builder(class device& device, const surface& surface) noexcept 
-                                : info { device, surface } 
+                            [[nodiscard]] explicit builder(
+                                std::weak_ptr<class device> device
+                                , std::weak_ptr<const surface> surface
+                            ) noexcept 
+                                : info { device, surface }
                             {}
 
-                            std::optional<swapchain> build() const noexcept;
+                            std::optional<std::unique_ptr<swapchain>> build() const noexcept;
 
                             builder& set_extent(struct width width, struct height height) noexcept;
                             builder& prefer_present_mode(present_mode mode) noexcept;
@@ -65,11 +69,10 @@ namespace blade
                             builder& set_clipped(VkBool32 clipped) noexcept;
                             builder& set_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept;
 
-
                             struct
                             {
-                                std::reference_wrapper<class device> device;
-                                std::reference_wrapper<const struct surface> surface;
+                                std::weak_ptr<class device> device;
+                                std::weak_ptr<const struct surface> surface;
 
                                 present_mode preferred_present_mode { present_mode::FIFO };
                                 VkAllocationCallbacks* allocation_callbacks { nullptr };
@@ -96,25 +99,23 @@ namespace blade
                             VkExtent2D select_extent_(const VkSurfaceCapabilitiesKHR& capabilities) const noexcept;
                     };
 
-                    swapchain(const class device& device) noexcept
-                        : _info { device }
+                    swapchain(std::weak_ptr<const class device> device) noexcept
+                        : _device { device }
                     {}
 
                     void destroy() noexcept;
 
-                    VkSwapchainKHR handle() const noexcept { return _info.swapchain; } 
+                    VkSwapchainKHR handle() const noexcept { return _swapchain; } 
+                    VkExtent2D get_extent() const noexcept { return _extent; }
 
                 private:
-                    struct
-                    {
-                        std::reference_wrapper<const class device> device;
-                        std::vector<VkImage> images {};
-                        std::vector<VkImageView> image_views {};
-                        VkAllocationCallbacks* allocation_callbacks { nullptr };
-                        VkSwapchainKHR swapchain { VK_NULL_HANDLE };
-                        VkFormat format {};
-                        VkExtent2D extent {};
-                    } _info;
+                    std::weak_ptr<const class device> _device {};
+                    std::vector<VkImage> _images {};
+                    std::vector<VkImageView> _image_views {};
+                    VkAllocationCallbacks* _allocation_callbacks { nullptr };
+                    VkSwapchainKHR _swapchain { VK_NULL_HANDLE };
+                    VkFormat _format {};
+                    VkExtent2D _extent {};
 
                 private:
                     std::optional<std::vector<VkImage>> create_images_() const noexcept;
