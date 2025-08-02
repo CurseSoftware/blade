@@ -19,6 +19,13 @@ namespace blade
             class shader
             {
                 public:
+                    enum type
+                    {
+                        vertex,
+                        fragment,
+                        compute
+                    };
+
                     struct builder
                     {
                         [[nodiscard]] explicit builder(const class device& device) noexcept
@@ -55,6 +62,12 @@ namespace blade
                      * @return `VkShaderModule` handle
                      */
                     const VkShaderModule handle() const noexcept { return _shader_module; }
+                    
+                    /**
+                     * @brief Get handle to shader stage info. Mainly used from the pipeline
+                     * @return `VkPipelineShaderStageCreateInfo` handle
+                     */
+                    const VkPipelineShaderStageCreateInfo shader_stage() const noexcept { return _pipeline_info; }
 
                     /**
                      * @brief Destroy the shader module

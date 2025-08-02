@@ -1,6 +1,7 @@
 #include "gfx/vulkan/pipeline.h"
 #include "gfx/vulkan/device.h"
 #include <array>
+#include <memory>
 #include <optional>
 #include <vulkan/vulkan_core.h>
 
@@ -10,14 +11,15 @@ namespace blade
     {
         namespace vk
         {
-            std::optional<pipeline> pipeline::builder::build() const noexcept
+            std::optional<std::shared_ptr<pipeline>> pipeline::builder::build() const noexcept
             {
                 std::array<VkDynamicState, 2> dynamic_states = {
                     VK_DYNAMIC_STATE_VIEWPORT
                     , VK_DYNAMIC_STATE_SCISSOR
                 };
 
-                class pipeline pipeline { info.device };
+                // class pipeline pipeline { info.device };
+                auto pipeline = std::make_shared<class pipeline>(info.device);
 
 
                 VkPipelineDynamicStateCreateInfo dynamic_state {
@@ -118,16 +120,58 @@ namespace blade
                     .pPushConstantRanges = nullptr
                 };
 
-                if (VK_SUCCESS != vkCreatePipelineLayout(info.device.lock()->handle(), &pipeline_layout_info, info.allocation_callbacks, &pipeline._layout))
+                if (VK_SUCCESS != vkCreatePipelineLayout(info.device.lock()->handle(), &pipeline_layout_info, info.allocation_callbacks, &pipeline->_layout))
                 {
                     return std::nullopt;
                 }
 
+                switch(info.type)
+                {
+                    case type::compute:
+                    {
+                        // TODO: Not supported currently
+                        return std::nullopt;
+                    } break;
+                    case type::graphics:
+                    {
+                        VkGraphicsPipelineCreateInfo graphics_info {
+                            .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+                            .stageCount = static_cast<u32>(info.shader_stages.size()),
+                            .pStages = info.shader_stages.data(),
+                            .pVertexInputState = &vertex_input,
+                            .pInputAssemblyState = &input_assembly,
+                            .pRasterizationState = &rasterizer,
+                            .pMultisampleState = &multisampling,
+                            .pDepthStencilState = nullptr,
+                            .pColorBlendState = &color_blending,
+                            .pDynamicState = &dynamic_state,
+                            .layout = pipeline->_layout,
+                            .renderPass = info.renderpass,
+                            .subpass = 0
+                        };
+
+                        const VkResult graphics_result = vkCreateGraphicsPipelines(
+                            info.device.lock()->handle()
+                            , VK_NULL_HANDLE
+                            , 1
+                            , &graphics_info
+                            , info.allocation_callbacks
+                            , &pipeline->_pipeline
+                        );
+
+                        if (graphics_result != VK_SUCCESS)
+                        {
+                            return std::nullopt;
+                        }
+                    } break;
+                }
+
                 return pipeline;
             }
-
+            
             void pipeline::destroy() noexcept
             {
+                vkDestroyPipeline(_device.lock()->handle(), _pipeline, _allocation_callbacks);
                 vkDestroyPipelineLayout(_device.lock()->handle(), _layout, _allocation_callbacks);
             }
         } // vk namespace
