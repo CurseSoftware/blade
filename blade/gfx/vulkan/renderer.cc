@@ -1,6 +1,7 @@
 #include "gfx/vulkan/renderer.h"
 #include "core/types.h"
 #include "gfx/handle.h"
+#include "gfx/program.h"
 #include "gfx/view.h"
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/platform.h"
@@ -23,7 +24,7 @@ namespace blade
                 logger::debug("vulkan_backend constructor called");
             }
 
-            vulkan_backend::~vulkan_backend()
+            vulkan_backend::~vulkan_backend() noexcept
             {
                 logger::debug("vulkan_backend destructor called");
                 if (_is_initialized)
@@ -82,6 +83,8 @@ namespace blade
                 {
                     _instance->create_debug_messenger();
                 }
+
+                _main_renderpass = renderpass::builder(_device).build().value();
 
                 // auto device_opt = device::create(_instance, { .use_swapchain = true });
                 // _device = device_opt.value();
@@ -159,6 +162,11 @@ namespace blade
                     logger::info("Destroyed view {}.", view.first.index);
                 }
 
+                if (_main_renderpass)
+                {
+                    _main_renderpass->destroy();
+                }
+
                 if (_device)
                 {
                     _device->destroy();
@@ -186,7 +194,9 @@ namespace blade
                 auto surface = surface_opt.value();
 
                 vulkan_backend::view view = {
-                    .surface = surface
+                    .device = _device,
+                    .surface = surface,
+                    .pipeline_builder = std::make_unique<pipeline::builder>(_device),
                 };
 
                 if (create_info.native_window_data)
@@ -207,18 +217,7 @@ namespace blade
                         return framebuffer_handle{.index = BLADE_NULL_HANDLE};
                     }
 
-//                    swapchain::create_info swapchain_create_info {};
-//                    swapchain_create_info.present_mode = present_mode::MAILBOX;
-//                    swapchain_create_info.preferred_format = VK_FORMAT_B8G8R8A8_SRGB;
-//                    swapchain_create_info.extent.width = create_info.width;
-//                    swapchain_create_info.extent.height = create_info.height;
-//                    
-//                    view.swapchain = swapchain::create(surface, _device, swapchain_create_info);
-                    if (!view.swapchain.has_value())
-                    {
-                        logger::error("Failed to create swapchain");
-                        return framebuffer_handle{.index = BLADE_NULL_HANDLE};
-                    }
+                    view.pipeline_builder.get()->set_extent(view.swapchain.value()->get_extent());
 
                     logger::info("Swapchain created.");
                 }
@@ -232,8 +231,9 @@ namespace blade
                 return handle;
             }
 
-            shader_handle vulkan_backend::create_shader(const std::vector<u8>& mem) noexcept
-            {
+            shader_handle vulkan_backend::create_shader(
+                const std::vector<u8>& mem
+            ) noexcept {
                 static u16 shader_handle_id = 1;
                 const auto shader_opt = shader::builder(*_device)
                     .use_allocation_callbacks(nullptr)
@@ -259,8 +259,128 @@ namespace blade
             {
             }
 
-            void vulkan_backend::view::destroy()
+            void vulkan_backend::submit() noexcept
             {
+                for (const auto& view_item : _views)
+                {
+                    auto handle = view_item.first;
+                    const auto& view = view_item.second;
+                }
+            }
+
+            bool vulkan_backend::view::create_framebuffers(std::weak_ptr<class renderpass> renderpass) noexcept
+            {
+                usize num_images = 1;
+                if (swapchain.has_value())
+                {
+                    num_images = swapchain.value().get()->num_image_views();
+                }
+
+                // framebuffers.resize(num_images);
+                // logger::info("Num Images: {}", framebuffers.size());
+
+                for (usize i = 0; i < num_images; i++)
+                {
+                    logger::info("Creating Vulkan Framebuffer {}", i);
+                    std::array<VkImageView, 1> attachments = {
+                        swapchain.value().get()->get_image_view(i)
+                    };
+
+                    if (renderpass.lock()->handle() == VK_NULL_HANDLE)
+                    {
+                        logger::info("REND NULL");
+                    }
+
+                    VkFramebufferCreateInfo framebuffer_info {
+                        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                        .renderPass = renderpass.lock()->handle(),
+                        .attachmentCount = static_cast<u32>(attachments.size()),
+                        .pAttachments = attachments.data(),
+                        .width = swapchain.value().get()->get_extent().width,
+                        .height = swapchain.value().get()->get_extent().height,
+                        .layers = 1
+                    };
+                    logger::info("Framebuffer info");
+
+                    VkFramebuffer framebuffer;
+                    const VkResult result = vkCreateFramebuffer(
+                        device.lock()->handle(),
+                        &framebuffer_info,
+                        allocation_callbacks,
+                        &framebuffer
+                    );
+                    framebuffers.push_back(framebuffer);
+
+                    if (result != VK_SUCCESS)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            program_handle vulkan_backend::create_view_program(
+                const framebuffer_handle framebuffer
+                , const shader_handle vert
+                , const shader_handle frag
+            ) noexcept {
+                logger::info("Creating program");
+                static u16 program_handle_id = 1;
+
+                const auto& view = _views.find(framebuffer);
+
+                if (
+                    _shaders.find(vert) == _shaders.end() 
+                    || _shaders.find(frag) == _shaders.end()
+                    || view == _views.end()
+                ) {
+                    return { BLADE_NULL_HANDLE };
+                }
+
+                logger::info("Found program and shaders");
+
+                struct program program {
+                    .vertex = vert,
+                    .fragment = frag
+                };
+
+                view->second.program = program;
+
+                program_handle handle { program_handle_id };
+
+                _programs.insert(std::make_pair(handle, program));
+
+                view->second.pipeline_builder.get()
+                    ->add_shader(shader::type::vertex, _shaders.find(vert)->second.handle())
+                    .add_shader(shader::type::fragment, _shaders.find(frag)->second.handle());
+
+                logger::info("Added shaders to pipeline");
+
+                view->second.create_framebuffers(_main_renderpass);
+                logger::info("Framebuffers created");
+
+                view->second.graphics_pipeline = view->second.pipeline_builder->add_renderpass(_main_renderpass->handle()).build().value();
+
+                program_handle_id += 1;
+
+                return handle;
+            }
+
+            void vulkan_backend::view::destroy() noexcept
+            {
+                if (graphics_pipeline)
+                {
+                    logger::info("Destroying graphics pipeline...");
+                    graphics_pipeline->destroy();
+                    logger::info("Destroyed.");
+                }
+                
+                for (const auto& framebuffer : framebuffers)
+                {
+                    vkDestroyFramebuffer(device.lock()->handle(), framebuffer, allocation_callbacks);
+                }
+                
                 if (swapchain.has_value())
                 {
                     swapchain.value()->destroy();

@@ -107,6 +107,10 @@ namespace blade
 
                     VkSwapchainKHR handle() const noexcept { return _swapchain; } 
                     VkExtent2D get_extent() const noexcept { return _extent; }
+                    u32 num_image_views() const noexcept { return static_cast<u32>(_image_views.size()); }
+                    const VkImageView& get_image_view(usize index) const noexcept { return _image_views[index]; }
+                    const std::vector<VkImageView>& get_image_views() const noexcept { return _image_views; }
+                    const VkImageView* get_image_views_raw() const noexcept { return _image_views.data(); }
 
                 private:
                     std::weak_ptr<const class device> _device {};

@@ -7,5 +7,6 @@
 #include "gfx/vulkan/surface.h"
 #include "gfx/vulkan/swapchain.h"
 #include "gfx/vulkan/shader.h"
+#include "gfx/vulkan/pipeline.h"
 
 #endif // BLADE_GFX_VULKAN_TYPES_H

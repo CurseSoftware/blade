@@ -1,3 +1,4 @@
+#include "gfx/handle.h"
 #include <blade/blade.h>
 
 namespace logger = blade::logger;
@@ -64,6 +65,13 @@ int main(void)
 
     auto vert_handle = gfx->create_shader(vert_code);
     auto frag_handle = gfx->create_shader(frag_code);
+
+    auto program = gfx->create_view_program(frame, vert_handle, frag_handle);
+
+    if (program.index != blade::gfx::BLADE_NULL_HANDLE)
+    {
+        logger::debug("Valid program handle created");
+    }
     
     gfx->shutdown();
 

@@ -59,6 +59,9 @@ namespace blade
                 virtual void frame() noexcept = 0;
                 virtual framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept = 0;
                 virtual shader_handle create_shader(const std::vector<u8>& mem) noexcept = 0;
+                virtual program_handle create_view_program(const framebuffer_handle framebuffer, const shader_handle vertex, const shader_handle fragment) noexcept = 0;
+
+                virtual void submit() = 0;
 
                 // TODO: other renderer backend methods
             
@@ -76,10 +79,14 @@ namespace blade
                 framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept;
 
                 shader_handle create_shader(const std::vector<u8>& mem) noexcept;
+
+                program_handle create_view_program(const framebuffer_handle framebuffer, const shader_handle vertex, const shader_handle fragment) noexcept;
+
+                void submit() noexcept;
                 
 
             private:
-                [[nodiscard]] renderer() {}
+                [[nodiscard]] explicit renderer() {}
                 
                 std::unique_ptr<renderer_backend> _backend { nullptr };
         };

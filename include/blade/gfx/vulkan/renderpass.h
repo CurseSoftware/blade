@@ -32,6 +32,7 @@ namespace blade
                         struct
                         {
                             std::weak_ptr<class device> device                     {};
+                            VkFormat format                                        {};
                             VkAllocationCallbacks* allocation_callbacks            { nullptr };
                             std::vector<VkSubpassDescription> subpass_descriptions {};
                             std::vector<VkAttachmentDescription> attachments       {};
@@ -47,9 +48,8 @@ namespace blade
                     {}
                 private:
 
-
-                    VkRenderPass _renderpass                     { VK_NULL_HANDLE };
                     std::weak_ptr<class device> _device          {};
+                    VkRenderPass _renderpass                     { VK_NULL_HANDLE };
                     VkAllocationCallbacks* _allocation_callbacks { nullptr };
             };
 

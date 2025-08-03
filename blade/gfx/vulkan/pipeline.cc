@@ -140,6 +140,7 @@ namespace blade
                             .pStages = info.shader_stages.data(),
                             .pVertexInputState = &vertex_input,
                             .pInputAssemblyState = &input_assembly,
+                            .pViewportState = &viewport_state,
                             .pRasterizationState = &rasterizer,
                             .pMultisampleState = &multisampling,
                             .pDepthStencilState = nullptr,
@@ -147,7 +148,7 @@ namespace blade
                             .pDynamicState = &dynamic_state,
                             .layout = pipeline->_layout,
                             .renderPass = info.renderpass,
-                            .subpass = 0
+                            .subpass = 0,
                         };
 
                         const VkResult graphics_result = vkCreateGraphicsPipelines(
@@ -167,6 +168,60 @@ namespace blade
                 }
 
                 return pipeline;
+            }
+
+            pipeline::builder& pipeline::builder::set_type(const enum type type) noexcept
+            {
+                info.type = type;
+
+                return *this;
+            }
+
+            pipeline::builder& pipeline::builder::add_shader(shader::type type, const VkShaderModule& shader) noexcept
+            {
+                const VkShaderStageFlagBits stage = [type]() -> VkShaderStageFlagBits {
+                    switch (type)
+                    {
+                        case shader::type::vertex:
+                            return VK_SHADER_STAGE_VERTEX_BIT;
+                        case shader::type::fragment:
+                            return VK_SHADER_STAGE_FRAGMENT_BIT;
+                        case shader::type::compute:
+                            return VK_SHADER_STAGE_COMPUTE_BIT;
+                    }
+                }();
+                
+                VkPipelineShaderStageCreateInfo stage_info {
+                    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                    .stage = stage,
+                    .module = shader,
+                    .pName = "main",
+                };
+
+                info.shader_stages.push_back(stage_info);
+                
+                return *this;
+            }
+            
+            pipeline::builder& pipeline::builder::add_renderpass(const VkRenderPass& renderpass) noexcept
+            {
+                info.renderpass = renderpass;
+
+                return *this;
+            }
+            
+            pipeline::builder& pipeline::builder::use_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept
+            {
+                info.allocation_callbacks = callbacks;
+
+                return *this;
+            }
+            
+            pipeline::builder& pipeline::builder::set_extent(VkExtent2D extent) noexcept
+            {
+                info.extent = extent;
+
+                return *this;
             }
             
             void pipeline::destroy() noexcept

@@ -39,6 +39,14 @@ namespace blade
             return nullptr;
         }
 
+        void renderer::submit() noexcept
+        {
+            if (_backend)
+            {
+                _backend->submit();
+            }
+        }
+
         framebuffer_handle renderer::create_framebuffer(framebuffer_create_info info) noexcept
         {
             if (_backend)
@@ -57,6 +65,16 @@ namespace blade
             }
 
             return shader_handle { BLADE_NULL_HANDLE };
+        }
+
+        program_handle renderer::create_view_program(const framebuffer_handle framebuffer, const shader_handle vertex, const shader_handle fragment) noexcept
+        {
+            if (_backend)
+            {
+                return _backend->create_view_program(framebuffer, vertex, fragment);
+            }
+
+            return program_handle { BLADE_NULL_HANDLE };
         }
 
         void renderer::shutdown() noexcept

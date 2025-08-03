@@ -43,6 +43,7 @@ namespace blade
                             builder& set_pipeline_layout(const VkPipelineLayout& layout) noexcept;
                             builder& add_viewport(const VkViewport& viewport) noexcept;
                             builder& add_scissor(const VkRect2D& viewport) noexcept;
+                            builder& set_extent(VkExtent2D extent) noexcept;
                             
                             struct
                             {
