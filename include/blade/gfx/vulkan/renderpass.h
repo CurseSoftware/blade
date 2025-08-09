@@ -14,6 +14,11 @@ namespace blade
     {
         namespace vk
         {
+            enum class attachment_description_kind 
+            {
+                color
+            };
+            
             class renderpass
             {
                 public:
@@ -26,8 +31,8 @@ namespace blade
                         std::optional<std::shared_ptr<renderpass>> build() const noexcept;
 
                         builder& use_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept;
-                        builder& add_attachment(VkAttachmentDescription attachment) noexcept;
-                        builder& add_subpass_description(VkSubpassDescription description) noexcept;
+                        builder& add_subpass_description(const VkSubpassDescription description) noexcept;
+                        builder& add_attachment(const VkAttachmentDescription description) noexcept;
 
                         struct
                         {

@@ -84,7 +84,33 @@ namespace blade
                     _instance->create_debug_messenger();
                 }
 
-                _main_renderpass = renderpass::builder(_device).build().value();
+                VkAttachmentDescription color_attachment {
+                    .format = VK_FORMAT_B8G8R8A8_SRGB,
+                    .samples = VK_SAMPLE_COUNT_1_BIT,
+                    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+                };
+                
+                VkAttachmentReference color_attachment_reference {
+                    .attachment = 0,
+                    .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                };
+
+                VkSubpassDescription subpass {
+                    .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    .colorAttachmentCount = 1,
+                    .pColorAttachments = &color_attachment_reference,
+                };
+
+                _main_renderpass = renderpass::builder(_device)
+                    .add_subpass_description(subpass)
+                    .add_attachment(color_attachment)
+                    .build()
+                    .value();
 
                 // auto device_opt = device::create(_instance, { .use_swapchain = true });
                 // _device = device_opt.value();
