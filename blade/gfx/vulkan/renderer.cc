@@ -106,12 +106,6 @@ namespace blade
                     .pColorAttachments = &color_attachment_reference,
                 };
 
-                _main_renderpass = renderpass::builder(_device)
-                    .add_subpass_description(subpass)
-                    .add_attachment(color_attachment)
-                    .build()
-                    .value();
-
                 // auto device_opt = device::create(_instance, { .use_swapchain = true });
                 // _device = device_opt.value();
 
@@ -188,11 +182,6 @@ namespace blade
                     logger::info("Destroyed view {}.", view.first.index);
                 }
 
-                if (_main_renderpass)
-                {
-                    _main_renderpass->destroy();
-                }
-
                 if (_device)
                 {
                     _device->destroy();
@@ -224,6 +213,7 @@ namespace blade
                     .surface = surface,
                     .pipeline_builder = std::make_unique<pipeline::builder>(_device),
                 };
+                
 
                 if (create_info.native_window_data)
                 {
@@ -242,6 +232,35 @@ namespace blade
                         logger::error("Failed to create swapchain");
                         return framebuffer_handle{.index = BLADE_NULL_HANDLE};
                     }
+                    
+                    VkAttachmentDescription color_attachment {
+                        .format = view.swapchain.value()->get_format(),
+                        .samples = VK_SAMPLE_COUNT_1_BIT,
+                        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+                    };
+                    
+                    VkAttachmentReference color_attachment_reference {
+                        .attachment = 0,
+                        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    };
+
+                    VkSubpassDescription subpass {
+                        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        .colorAttachmentCount = 1,
+                        .pColorAttachments = &color_attachment_reference,
+                    };
+
+                    view.renderpass = renderpass::builder(_device)
+                        .add_subpass_description(subpass)
+                        .add_attachment(color_attachment)
+                        .build()
+                        .value();
+
 
                     view.pipeline_builder.get()->set_extent(view.swapchain.value()->get_extent());
 
@@ -383,10 +402,12 @@ namespace blade
 
                 logger::info("Added shaders to pipeline");
 
-                view->second.create_framebuffers(_main_renderpass);
+                view->second.create_framebuffers(view->second.renderpass);
                 logger::info("Framebuffers created");
 
-                view->second.graphics_pipeline = view->second.pipeline_builder->add_renderpass(_main_renderpass->handle()).build().value();
+                view->second.graphics_pipeline = view->second.pipeline_builder
+                    ->add_renderpass(view->second.renderpass->handle())
+                    .build().value();
 
                 program_handle_id += 1;
 
@@ -399,6 +420,15 @@ namespace blade
                 {
                     logger::info("Destroying graphics pipeline...");
                     graphics_pipeline->destroy();
+                    graphics_pipeline = nullptr;
+                    logger::info("Destroyed.");
+                }
+
+                if (renderpass)
+                {
+                    logger::info("Destroying renderpass...");
+                    renderpass->destroy();
+                    renderpass = nullptr;
                     logger::info("Destroyed.");
                 }
                 

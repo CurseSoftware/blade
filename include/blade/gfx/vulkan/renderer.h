@@ -42,6 +42,7 @@ namespace blade
                         VkAllocationCallbacks* allocation_callbacks               { nullptr };
                         std::unique_ptr<class pipeline::builder> pipeline_builder { nullptr };
                         std::shared_ptr<class pipeline> graphics_pipeline         { nullptr };
+                        std::shared_ptr<class renderpass> renderpass              { nullptr };
                         struct program program                                    {};
 
                         void destroy() noexcept;
@@ -58,7 +59,6 @@ namespace blade
                     bool _is_initialized                                       { false };
                     std::shared_ptr<instance> _instance                        { nullptr };
                     std::shared_ptr<class device> _device                      { nullptr };
-                    std::shared_ptr<class renderpass> _main_renderpass         { nullptr };
                     VkAllocationCallbacks* allocation_callbacks                { nullptr };
                     std::unordered_map<framebuffer_handle, view> _views        {};
                     std::unordered_map<shader_handle, shader> _shaders         {};
