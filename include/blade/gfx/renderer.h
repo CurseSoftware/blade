@@ -60,6 +60,7 @@ namespace blade
                 virtual framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept = 0;
                 virtual shader_handle create_shader(const std::vector<u8>& mem) noexcept = 0;
                 virtual program_handle create_view_program(const framebuffer_handle framebuffer, const shader_handle vertex, const shader_handle fragment) noexcept = 0;
+                virtual void set_viewport(const framebuffer_handle framebuffer, u32 x, u32 y, struct width width, struct height height) noexcept = 0;
 
                 virtual void submit() = 0;
 
@@ -81,6 +82,8 @@ namespace blade
                 shader_handle create_shader(const std::vector<u8>& mem) noexcept;
 
                 program_handle create_view_program(const framebuffer_handle framebuffer, const shader_handle vertex, const shader_handle fragment) noexcept;
+
+                void set_viewport(const framebuffer_handle framebuffer, u32 x, u32 y, struct width width, struct height height) const noexcept;
 
                 void submit() noexcept;
                 

@@ -77,6 +77,14 @@ namespace blade
             return program_handle { BLADE_NULL_HANDLE };
         }
 
+        void renderer::set_viewport(const framebuffer_handle framebuffer, u32 x, u32 y, struct width width, struct height height) const noexcept
+        {
+            if (_backend)
+            {
+                _backend->set_viewport(framebuffer, x, y, width, height);
+            }
+        }
+
         void renderer::shutdown() noexcept
         {
             _backend->shutdown();

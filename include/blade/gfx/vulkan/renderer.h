@@ -2,6 +2,7 @@
 #include "gfx/renderer.h"
 #include "gfx/view.h"
 #include "gfx/program.h"
+#include "gfx/vulkan/command.h"
 #include "gfx/vulkan/renderpass.h"
 #include "gfx/vulkan/types.h"
 #include <unordered_map>
@@ -27,6 +28,7 @@ namespace blade
                     bool shutdown() noexcept override;
                     void submit() noexcept override;
                     void frame() noexcept override;
+                    void set_viewport(const framebuffer_handle framebuffer, u32 x, u32 y, struct width width, struct height height) noexcept override;
                     framebuffer_handle create_framebuffer(framebuffer_create_info) noexcept override;
 
                     shader_handle create_shader(const std::vector<u8>&) noexcept override;
@@ -59,6 +61,7 @@ namespace blade
                     bool _is_initialized                                       { false };
                     std::shared_ptr<instance> _instance                        { nullptr };
                     std::shared_ptr<class device> _device                      { nullptr };
+                    std::shared_ptr<class command_pool> _command_pool           { nullptr };
                     VkAllocationCallbacks* allocation_callbacks                { nullptr };
                     std::unordered_map<framebuffer_handle, view> _views        {};
                     std::unordered_map<shader_handle, shader> _shaders         {};

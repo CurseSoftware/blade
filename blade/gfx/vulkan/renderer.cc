@@ -84,27 +84,13 @@ namespace blade
                     _instance->create_debug_messenger();
                 }
 
-                VkAttachmentDescription color_attachment {
-                    .format = VK_FORMAT_B8G8R8A8_SRGB,
-                    .samples = VK_SAMPLE_COUNT_1_BIT,
-                    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                    .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-                };
-                
-                VkAttachmentReference color_attachment_reference {
-                    .attachment = 0,
-                    .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                };
-
-                VkSubpassDescription subpass {
-                    .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    .colorAttachmentCount = 1,
-                    .pColorAttachments = &color_attachment_reference,
-                };
+                logger::info("Creating command pool");
+                auto pool_res = command_pool::builder(_device)
+                    .use_allocation_callbacks(nullptr)
+                    .set_queue_family_index(_device->get_physical_device().lock()->graphics_queue_index().value())
+                    .build();
+                _command_pool = pool_res.value();
+                _command_pool->allocate_buffers(1);
 
                 // auto device_opt = device::create(_instance, { .use_swapchain = true });
                 // _device = device_opt.value();
@@ -182,10 +168,19 @@ namespace blade
                     logger::info("Destroyed view {}.", view.first.index);
                 }
 
+                logger::info("Destroying command pool...");
+                if (_command_pool)
+                {
+                    _command_pool->destroy();
+                }
+                logger::info("Destroyed.");
+
+                logger::info("Destroying device...");
                 if (_device)
                 {
                     _device->destroy();
                 }
+                logger::info("Destroyed.");
 
                 _instance->destroy_debug_messenger();
                 _instance->destroy();
@@ -301,6 +296,10 @@ namespace blade
             }
 
             void vulkan_backend::frame() noexcept
+            {
+            }
+
+            void vulkan_backend::set_viewport(const framebuffer_handle framebuffer, u32 x, u32 y, struct width width, struct height height) noexcept
             {
             }
 
