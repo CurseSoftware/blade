@@ -23,13 +23,6 @@ namespace blade
 
             void command_buffer::submit(const std::vector<VkSemaphore>& semaphores) const noexcept
             {
-                VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-                VkSubmitInfo submit_info {
-                    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                    .waitSemaphoreCount = static_cast<u32>(semaphores.size()),
-                    .pWaitSemaphores = semaphores.data(),
-                    .pWaitDstStageMask = wait_stages
-                };
             }
 
             std::optional<command_buffer::recording> command_buffer::begin(VkCommandBufferUsageFlags flags) noexcept
