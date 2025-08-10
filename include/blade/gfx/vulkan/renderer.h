@@ -28,7 +28,7 @@ namespace blade
                     bool shutdown() noexcept override;
                     void submit() noexcept override;
                     void frame() noexcept override;
-                    void set_viewport(const framebuffer_handle framebuffer, u32 x, u32 y, struct width width, struct height height) noexcept override;
+                    void set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) noexcept override;
                     framebuffer_handle create_framebuffer(framebuffer_create_info) noexcept override;
 
                     shader_handle create_shader(const std::vector<u8>&) noexcept override;
@@ -46,10 +46,26 @@ namespace blade
                         std::shared_ptr<class pipeline> graphics_pipeline         { nullptr };
                         std::shared_ptr<class renderpass> renderpass              { nullptr };
                         struct program program                                    {};
+                        VkViewport viewport                                       {};
+                        VkSemaphore image_available_semaphore                     {};
+                        VkSemaphore render_finished_semaphore                     {};
+                        VkFence in_flight_fence                                   {};
+                        u32 current_image_index                                   { 0 };
 
                         void destroy() noexcept;
                         bool create_framebuffers(std::weak_ptr<class renderpass> renderpass) noexcept;
+
+                        void set_viewport(f32 x, f32 y, struct width width, struct height height) noexcept;
+                       
+                        void record_commands(class command_buffer& command_buffer) const noexcept;
+
+                        void frame(class command_buffer& command_buffer) noexcept;
+
+                        VkExtent2D get_extent() const noexcept;
+
+                        static std::optional<view> create(std::weak_ptr<class instance> instance, std::weak_ptr<class device> device, const framebuffer_create_info info) noexcept;
                     };
+                
                 private:
                     /// @brief Append platform-specific vulkan extensions to the list
                     std::vector<const char*> get_platform_extensions() const noexcept;
@@ -61,7 +77,7 @@ namespace blade
                     bool _is_initialized                                       { false };
                     std::shared_ptr<instance> _instance                        { nullptr };
                     std::shared_ptr<class device> _device                      { nullptr };
-                    std::shared_ptr<class command_pool> _command_pool           { nullptr };
+                    std::shared_ptr<class command_pool> _command_pool          { nullptr };
                     VkAllocationCallbacks* allocation_callbacks                { nullptr };
                     std::unordered_map<framebuffer_handle, view> _views        {};
                     std::unordered_map<shader_handle, shader> _shaders         {};

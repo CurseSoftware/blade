@@ -7,6 +7,31 @@ namespace blade
     {
         namespace vk
         {
+            ////////////////////////////////////////////////
+            ///               RENDERPASS                 ///
+            ////////////////////////////////////////////////
+            void command_buffer::reset() const noexcept
+            {
+                const u32 flags = 0;
+                vkResetCommandBuffer(_buffer, flags);
+            }
+
+            void command_buffer::end() const noexcept
+            {
+                vkEndCommandBuffer(_buffer);
+            }
+
+            void command_buffer::submit(const std::vector<VkSemaphore>& semaphores) const noexcept
+            {
+                VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+                VkSubmitInfo submit_info {
+                    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                    .waitSemaphoreCount = static_cast<u32>(semaphores.size()),
+                    .pWaitSemaphores = semaphores.data(),
+                    .pWaitDstStageMask = wait_stages
+                };
+            }
+
             std::optional<command_buffer::recording> command_buffer::begin(VkCommandBufferUsageFlags flags) noexcept
             {
                 VkCommandBufferBeginInfo begin_info {
@@ -32,7 +57,7 @@ namespace blade
                 return rec;
             }
 
-            command_buffer::recording::record_renderpass command_buffer::recording::begin_renderpass(recording& rec, std::weak_ptr<renderpass> rp, VkFramebuffer framebuffer,  const std::vector<VkClearValue>& clear_values, VkRect2D render_area) noexcept
+            command_buffer::recording::record_renderpass command_buffer::recording::begin_renderpass(std::weak_ptr<renderpass> rp, VkFramebuffer framebuffer,  const std::vector<VkClearValue>& clear_values, VkRect2D render_area) noexcept
             {
                 return record_renderpass(*this, rp, framebuffer, clear_values, render_area);
             }

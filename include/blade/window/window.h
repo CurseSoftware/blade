@@ -61,6 +61,15 @@ namespace blade
             /// @brief Get the window handle for this window
             /// @return data for the window handle. See gfx module
             struct gfx::framebuffer_create_info::native_window_data get_window_handle() const noexcept;
+
+            /// @brief Getter for the current width of the window
+            /// @return u32 of the window width
+            u32 get_width() const noexcept { return _width; }
+            
+            /// @brief Getter for the current height of the window
+            /// @return u32 of the window height 
+            u32 get_height() const noexcept { return _height; }
+
         
         private:
             [[nodiscard]] window(

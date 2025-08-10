@@ -112,6 +112,7 @@ namespace blade
                     const std::vector<VkImageView>& get_image_views() const noexcept { return _image_views; }
                     const VkImageView* get_image_views_raw() const noexcept { return _image_views.data(); }
                     VkFormat get_format() const noexcept { return _format; }
+                    u32 get_image_index(VkSemaphore semaphore, VkFence fence = VK_NULL_HANDLE) const noexcept;
 
                 private:
                     std::weak_ptr<const class device> _device {};

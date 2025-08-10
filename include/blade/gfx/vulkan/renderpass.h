@@ -33,6 +33,7 @@ namespace blade
                         builder& use_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept;
                         builder& add_subpass_description(const VkSubpassDescription description) noexcept;
                         builder& add_attachment(const VkAttachmentDescription description) noexcept;
+                        builder& add_subpass_dependency(VkSubpassDependency dependency) noexcept;
 
                         struct
                         {
@@ -41,6 +42,7 @@ namespace blade
                             VkAllocationCallbacks* allocation_callbacks            { nullptr };
                             std::vector<VkSubpassDescription> subpass_descriptions {};
                             std::vector<VkAttachmentDescription> attachments       {};
+                            std::vector<VkSubpassDependency> subpass_dependencies {};
                         } info {};
                     };
 

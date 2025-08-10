@@ -8,6 +8,7 @@
 #include "gfx/vulkan/shader.h"
 #include "gfx/vulkan/types.h"
 #include "gfx/vulkan/utils.h"
+#include <cstdint>
 #include <cstring>
 #include <optional>
 #include <utility>
@@ -193,74 +194,15 @@ namespace blade
             {
                 logger::info("Creating framebuffer...");
                 static u16 framebuffer_handle_id = 0;
-                
-                auto surface_opt = surface::create(_instance, create_info);
-                if (!surface_opt.has_value())
+
+                auto view_opt = view::create(_instance, _device, create_info);
+                if (!view_opt.has_value())
                 {
-                    logger::error("Failed to create framebuffer");
-                    return framebuffer_handle{.index = BLADE_NULL_HANDLE};
+                    logger::info("Failed to create view");
+                    return { BLADE_NULL_HANDLE };
                 }
 
-                auto surface = surface_opt.value();
-
-                vulkan_backend::view view = {
-                    .device = _device,
-                    .surface = surface,
-                    .pipeline_builder = std::make_unique<pipeline::builder>(_device),
-                };
-                
-
-                if (create_info.native_window_data)
-                {
-                    logger::info("Creating swapchain...");
-                    view.swapchain = swapchain::builder(_device, view.surface)
-                        .set_allocation_callbacks(nullptr)
-                        .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
-                        .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-                        .set_clipped(VK_TRUE)
-                        .set_extent(create_info.width, create_info.height)
-                        .prefer_present_mode(present_mode::MAILBOX)
-                        .build();
-
-                    if (!view.swapchain.has_value())
-                    {
-                        logger::error("Failed to create swapchain");
-                        return framebuffer_handle{.index = BLADE_NULL_HANDLE};
-                    }
-                    
-                    VkAttachmentDescription color_attachment {
-                        .format = view.swapchain.value()->get_format(),
-                        .samples = VK_SAMPLE_COUNT_1_BIT,
-                        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-                    };
-                    
-                    VkAttachmentReference color_attachment_reference {
-                        .attachment = 0,
-                        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    };
-
-                    VkSubpassDescription subpass {
-                        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        .colorAttachmentCount = 1,
-                        .pColorAttachments = &color_attachment_reference,
-                    };
-
-                    view.renderpass = renderpass::builder(_device)
-                        .add_subpass_description(subpass)
-                        .add_attachment(color_attachment)
-                        .build()
-                        .value();
-
-
-                    view.pipeline_builder.get()->set_extent(view.swapchain.value()->get_extent());
-
-                    logger::info("Swapchain created.");
-                }
+                auto view = std::move(view_opt.value());
 
                 const framebuffer_handle handle {.index=framebuffer_handle_id};
                 _views.insert(std::make_pair(handle, std::move(view)));
@@ -299,8 +241,17 @@ namespace blade
             {
             }
 
-            void vulkan_backend::set_viewport(const framebuffer_handle framebuffer, u32 x, u32 y, struct width width, struct height height) noexcept
+            void vulkan_backend::set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) noexcept
             {
+                auto view_it = _views.find(framebuffer);
+                if (view_it == _views.end())
+                {
+                    return;
+                }
+
+                const auto& view = view_it->second;
+
+
             }
 
             void vulkan_backend::submit() noexcept
@@ -310,6 +261,45 @@ namespace blade
                     auto handle = view_item.first;
                     const auto& view = view_item.second;
                 }
+            }
+
+            void vulkan_backend::view::record_commands(class command_buffer& command_buffer) const noexcept
+            {
+                auto recording = command_buffer.begin();
+
+                u32 vertex_count = 3,
+                    instance_count = 1,
+                    first_vertex = 0,
+                    first_instance = 0;
+
+                std::vector<VkClearValue> clear_values(2);
+                clear_values[0].color = {{ 0.f, 0.f, 0.f, 0.f }};
+                clear_values[1].depthStencil = { 1.f, 0 };
+
+                VkRect2D render_area {
+                    .offset = { 0, 0 },
+                    .extent = get_extent(),
+                };
+                
+                auto pass = recording->begin_renderpass(renderpass, framebuffers[current_image_index], clear_values, render_area);
+                pass.bind_pipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->handle());
+                pass.draw(vertex_count, instance_count, first_vertex, first_instance);
+                pass.end();
+
+                command_buffer.end();
+            }
+
+            VkExtent2D vulkan_backend::view::get_extent() const noexcept
+            {
+                if (swapchain.has_value())
+                {
+                    return swapchain.value()->get_extent();
+                }
+
+                return VkExtent2D {
+                    .width = static_cast<u32>(viewport.width),
+                    .height = static_cast<u32>(viewport.height),
+                };
             }
 
             bool vulkan_backend::view::create_framebuffers(std::weak_ptr<class renderpass> renderpass) noexcept
@@ -413,6 +403,153 @@ namespace blade
                 return handle;
             }
 
+            std::optional<vulkan_backend::view> vulkan_backend::view::create(std::weak_ptr<class instance> instance, std::weak_ptr<class device> device, const framebuffer_create_info info) noexcept
+            {
+                auto surface_opt = surface::create(instance, info);
+                if (!surface_opt.has_value())
+                {
+                    logger::error("Failed to create framebuffer");
+                    return std::nullopt;
+                }
+
+                auto surface = surface_opt.value();
+
+                struct view view {
+                    .device = device,
+                    .surface = surface,
+                    .pipeline_builder = std::make_unique<pipeline::builder>(device)
+                };
+
+                if (info.native_window_data)
+                {
+                    logger::info("Creating swapchain...");
+                    view.swapchain = swapchain::builder(device, view.surface)
+                        .set_allocation_callbacks(nullptr)
+                        .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+                        .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+                        .set_clipped(VK_TRUE)
+                        .set_extent(info.width, info.height)
+                        .prefer_present_mode(present_mode::MAILBOX)
+                        .build();
+
+                    if (!view.swapchain.has_value())
+                    {
+                        logger::error("Failed to create swapchain");
+                        return std::nullopt;
+                    }
+                    
+                    VkAttachmentDescription color_attachment {
+                        .format = view.swapchain.value()->get_format(),
+                        .samples = VK_SAMPLE_COUNT_1_BIT,
+                        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+                    };
+                    
+                    VkAttachmentReference color_attachment_reference {
+                        .attachment = 0,
+                        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    };
+
+                    VkSubpassDescription subpass {
+                        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        .colorAttachmentCount = 1,
+                        .pColorAttachments = &color_attachment_reference,
+                    };
+               
+                    VkSubpassDependency dependency {
+                        .srcSubpass = VK_SUBPASS_EXTERNAL,
+                        .dstSubpass = 0,
+                        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .srcAccessMask = 0,
+                        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                    };
+
+                    view.renderpass = renderpass::builder(device)
+                        .add_subpass_description(subpass)
+                        .add_attachment(color_attachment)
+                        .add_subpass_dependency(dependency)
+                        .build()
+                        .value();
+
+
+                    view.pipeline_builder.get()->set_extent(view.swapchain.value()->get_extent());
+
+                    logger::info("Swapchain created.");
+                }
+
+                VkSemaphoreCreateInfo semaphore_info { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+                VkFenceCreateInfo fence_info { 
+                    .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                    .flags = VK_FENCE_CREATE_SIGNALED_BIT
+                };
+
+                const VkResult image_available_sem_result = vkCreateSemaphore(device.lock()->handle(), &semaphore_info, nullptr, &view.image_available_semaphore);
+                const VkResult render_finished_sem_result = vkCreateSemaphore(device.lock()->handle(), &semaphore_info, nullptr, &view.render_finished_semaphore);
+                const VkResult fence_result = vkCreateFence(device.lock()->handle(), &fence_info, nullptr, &view.in_flight_fence);
+
+                if (image_available_sem_result != VK_SUCCESS
+                    || render_finished_sem_result != VK_SUCCESS
+                    || fence_result != VK_SUCCESS
+                ) {
+                    logger::info("Failed to create synchronization objects");
+                    return std::nullopt;
+                }
+
+                return view;
+            }
+
+            void vulkan_backend::view::set_viewport(f32 x, f32 y, struct width width, struct height height) noexcept
+            {
+                viewport = VkViewport {
+                    .x = x,
+                    .y = y,
+                    .width = static_cast<float>(width.w),
+                    .height = static_cast<float>(height.h),
+                    .minDepth = 0.f,
+                    .maxDepth = 1.f
+                };
+            }
+
+            void vulkan_backend::view::frame(class command_buffer& command_buffer) noexcept
+            {
+                const u32 fence_count = 1;
+                const VkBool32 wait_all = VK_TRUE;
+                const u64 timeout = UINT64_MAX;
+                const std::vector<VkSemaphore> signal_semaphores = { image_available_semaphore };
+                
+                if (swapchain.has_value())
+                {
+                    current_image_index = swapchain.value()->get_image_index(image_available_semaphore);
+                }
+                
+                vkWaitForFences(device.lock()->handle(), fence_count, &in_flight_fence, wait_all, timeout);
+                vkResetFences(device.lock()->handle(), fence_count, &in_flight_fence);
+                command_buffer.reset();
+                record_commands(command_buffer);
+
+                command_buffer.submit(signal_semaphores);
+                
+                if (swapchain.has_value())
+                {
+                    std::array<VkSwapchainKHR, 1> swapchains = { swapchain.value()->handle() };
+                    
+                    VkPresentInfoKHR present_info {
+                        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                        .waitSemaphoreCount = static_cast<u32>(signal_semaphores.size()),
+                        .pWaitSemaphores = signal_semaphores.data(),
+                        .swapchainCount = static_cast<u32>(swapchains.size()),
+                        .pSwapchains = swapchains.data()
+                    };
+
+                    vkQueuePresentKHR(device.lock()->get_queue(queue_type::graphics).value(), &present_info);
+                }
+            }
+
             void vulkan_backend::view::destroy() noexcept
             {
                 if (graphics_pipeline)
@@ -430,6 +567,10 @@ namespace blade
                     renderpass = nullptr;
                     logger::info("Destroyed.");
                 }
+
+                vkDestroyFence(device.lock()->handle(), in_flight_fence, allocation_callbacks);
+                vkDestroySemaphore(device.lock()->handle(), render_finished_semaphore, allocation_callbacks);
+                vkDestroySemaphore(device.lock()->handle(), image_available_semaphore, allocation_callbacks);
                 
                 for (const auto& framebuffer : framebuffers)
                 {

@@ -26,6 +26,9 @@ namespace blade
 
                     class recording;
                     std::optional<command_buffer::recording> begin(VkCommandBufferUsageFlags flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) noexcept;
+                    void reset() const noexcept;
+                    void submit(const std::vector<VkSemaphore>& semaphores) const noexcept;
+                    void end() const noexcept;
 
                 public:
                     class recording 
@@ -115,7 +118,7 @@ namespace blade
 
                             static std::optional<recording> create(command_buffer& cb, VkCommandBufferBeginInfo begin_info) noexcept;
 
-                            record_renderpass begin_renderpass(recording& rec, std::weak_ptr<renderpass> rp, VkFramebuffer framebuffer, const std::vector<VkClearValue>& clear_values, VkRect2D render_area) noexcept;
+                            record_renderpass begin_renderpass(std::weak_ptr<renderpass> rp, VkFramebuffer framebuffer, const std::vector<VkClearValue>& clear_values, VkRect2D render_area) noexcept;
 
                         private:
                             command_buffer& _buffer;

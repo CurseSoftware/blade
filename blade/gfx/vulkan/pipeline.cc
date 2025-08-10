@@ -117,7 +117,7 @@ namespace blade
                     .setLayoutCount = 0,
                     .pSetLayouts = nullptr,
                     .pushConstantRangeCount = 0,
-                    .pPushConstantRanges = nullptr
+                    .pPushConstantRanges = nullptr,
                 };
 
                 if (VK_SUCCESS != vkCreatePipelineLayout(info.device.lock()->handle(), &pipeline_layout_info, info.allocation_callbacks, &pipeline->_layout))

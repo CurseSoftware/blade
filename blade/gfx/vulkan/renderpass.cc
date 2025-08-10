@@ -38,7 +38,9 @@ namespace blade
                     .attachmentCount = 1,
                     .pAttachments = info.attachments.data(),
                     .subpassCount = 1,
-                    .pSubpasses = info.subpass_descriptions.data()
+                    .pSubpasses = info.subpass_descriptions.data(),
+                    .dependencyCount = static_cast<u32>(info.subpass_dependencies.size()),
+                    .pDependencies = info.subpass_dependencies.data()
                 };
 
                 const VkResult result = vkCreateRenderPass(
@@ -56,6 +58,13 @@ namespace blade
                 }
 
                 return renderpass;
+            }
+
+            renderpass::builder& renderpass::builder::add_subpass_dependency(VkSubpassDependency dependency) noexcept
+            {
+                info.subpass_dependencies.push_back(dependency);
+
+                return *this;
             }
 
             renderpass::builder& renderpass::builder::use_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept

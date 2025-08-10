@@ -275,6 +275,15 @@ namespace blade
                 return images;
             }
 
+            u32 swapchain::get_image_index(VkSemaphore semaphore, VkFence fence) const noexcept
+            {
+                u32 index;
+                const u64 timeout = UINT64_MAX;
+                vkAcquireNextImageKHR(_device.lock()->handle(), handle(), timeout, semaphore, fence, &index);
+
+                return index;
+            }
+
 
             //std::optional<swapchain> swapchain::create(const struct surface& surface, const struct device& device, struct create_info create_info) noexcept
             //{

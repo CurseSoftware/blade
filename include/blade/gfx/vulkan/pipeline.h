@@ -108,14 +108,13 @@ namespace blade
                 // Public Methods
                 public:
                     void destroy() noexcept;
+                    VkPipeline handle() const noexcept { return _pipeline; }
 
                     [[nodiscard]] explicit pipeline(std::weak_ptr<const class device> device) noexcept
                         : _device{ device }
                     {}
                 // Private Methods
                 private:
-
-
 
                 private:
                     std::weak_ptr<const class device> _device    {};
