@@ -25,6 +25,8 @@ namespace blade
         height h
     ) {
         auto wnd = std::make_unique<window>(window(name, w, h));
+        wnd->_width = w.w;
+        wnd->_height = h.h;
 
         wnd->_display = XOpenDisplay(nullptr);
 

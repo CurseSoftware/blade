@@ -47,6 +47,14 @@ namespace blade
             }
         }
 
+        void renderer::present() noexcept
+        {
+            if (_backend)
+            {
+                _backend->frame();
+            }
+        }
+
         framebuffer_handle renderer::create_framebuffer(framebuffer_create_info info) noexcept
         {
             if (_backend)

@@ -86,7 +86,8 @@ namespace blade
                 void set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) const noexcept;
 
                 void submit() noexcept;
-                
+
+                void present() noexcept;
 
             private:
                 [[nodiscard]] explicit renderer() {}

@@ -90,14 +90,16 @@ namespace blade
                 vkCmdDraw(_recording._buffer.handle(), vertex_count, instance_count, first_vertex, first_instance);
             }
 
-            bool command_buffer::recording::record_renderpass::end() const noexcept
+            bool command_buffer::recording::record_renderpass::end() noexcept
             {
                 if (!_active)
                 {
+                    logger::info("inactive render pass");
                     return false;
                 }
 
                 vkCmdEndRenderPass(_recording._buffer.handle());
+                _active = false;
 
                 return true;
             }

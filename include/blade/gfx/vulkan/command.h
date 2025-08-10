@@ -82,7 +82,7 @@ namespace blade
                                             .clearValueCount = static_cast<u32>(clear_values.size()),
                                             .pClearValues = clear_values.data()
                                         };
-
+                                        
                                         vkCmdBeginRenderPass(rec._buffer.handle(), &pass_info, VK_SUBPASS_CONTENTS_INLINE);
                                     }
 
@@ -109,7 +109,7 @@ namespace blade
                                     void set_viewport(VkViewport viewport) const noexcept;
                                     void set_scissor(VkRect2D scissor) const noexcept;
                                     void draw(u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance) const noexcept;
-                                    bool end() const noexcept;
+                                    bool end() noexcept;
                                 private:
                                     recording& _recording;
                                     std::weak_ptr<renderpass> _renderpass {};
@@ -142,12 +142,16 @@ namespace blade
                         , _allocation_callbacks{ callbacks }
                     {}
 
+                    command_buffer& get_buffer(u32 index) const noexcept { return *_buffer_handlers[index].get(); }
+
                     /**
                      * @brief Create and allocate the command buffers from the command pool
                      * @param num_buffers The number of buffers to allocate
                      * @return `true` on success. `false` otherwise (typically attempting to create buffers after creating some before)
                      */
                     bool allocate_buffers(const u32 num_buffers) noexcept;
+
+                    
 
                     void destroy() noexcept;
 

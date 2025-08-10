@@ -10,6 +10,7 @@
 #include "gfx/vulkan/utils.h"
 #include <cstdint>
 #include <cstring>
+#include <locale>
 #include <optional>
 #include <utility>
 #include <vulkan/vulkan_core.h>
@@ -154,6 +155,7 @@ namespace blade
             bool vulkan_backend::shutdown() noexcept
             {
                 logger::info("Vulkan backend shutting down");
+                vkDeviceWaitIdle(_device->handle());
 
                 for (auto&& shader : _shaders)
                 {
@@ -239,6 +241,12 @@ namespace blade
 
             void vulkan_backend::frame() noexcept
             {
+                for (auto&& view: _views)
+                {
+                    command_buffer& cmd = _command_pool->get_buffer(0);
+
+                    view.second.frame(cmd);
+                }
             }
 
             void vulkan_backend::set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) noexcept
@@ -246,12 +254,11 @@ namespace blade
                 auto view_it = _views.find(framebuffer);
                 if (view_it == _views.end())
                 {
+                    logger::info("SetViewport framebuffer not found");
                     return;
                 }
 
-                const auto& view = view_it->second;
-
-
+                view_it->second.set_viewport(x, y, width, height);
             }
 
             void vulkan_backend::submit() noexcept
@@ -283,6 +290,8 @@ namespace blade
                 
                 auto pass = recording->begin_renderpass(renderpass, framebuffers[current_image_index], clear_values, render_area);
                 pass.bind_pipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->handle());
+                pass.set_viewport(viewport);
+                pass.set_scissor(render_area);
                 pass.draw(vertex_count, instance_count, first_vertex, first_instance);
                 pass.end();
 
@@ -465,7 +474,7 @@ namespace blade
                         .dstSubpass = 0,
                         .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                         .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .srcAccessMask = 0,
+                        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                     };
 
@@ -517,22 +526,46 @@ namespace blade
 
             void vulkan_backend::view::frame(class command_buffer& command_buffer) noexcept
             {
+                
                 const u32 fence_count = 1;
                 const VkBool32 wait_all = VK_TRUE;
                 const u64 timeout = UINT64_MAX;
-                const std::vector<VkSemaphore> signal_semaphores = { image_available_semaphore };
+                
+                vkWaitForFences(device.lock()->handle(), fence_count, &in_flight_fence, wait_all, timeout);
+                vkResetFences(device.lock()->handle(), fence_count, &in_flight_fence);
                 
                 if (swapchain.has_value())
                 {
                     current_image_index = swapchain.value()->get_image_index(image_available_semaphore);
                 }
+
+                const std::vector<VkSemaphore> signal_semaphores = { render_finished_semaphore };
+                const std::vector<VkSemaphore> wait_semaphores = { image_available_semaphore };
                 
-                vkWaitForFences(device.lock()->handle(), fence_count, &in_flight_fence, wait_all, timeout);
-                vkResetFences(device.lock()->handle(), fence_count, &in_flight_fence);
                 command_buffer.reset();
                 record_commands(command_buffer);
+                std::array<VkCommandBuffer, 1> command_buffers = { command_buffer.handle() };
+                
+                VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+                
+                VkSubmitInfo submit_info {
+                    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                    .waitSemaphoreCount = static_cast<u32>(wait_semaphores.size()),
+                    .pWaitSemaphores = wait_semaphores.data(),
+                    .pWaitDstStageMask = wait_stages,
+                    .commandBufferCount = 1,
+                    .pCommandBuffers = command_buffers.data(),
+                    .signalSemaphoreCount = static_cast<u32>(signal_semaphores.size()),
+                    .pSignalSemaphores = signal_semaphores.data(),
+                };
 
-                command_buffer.submit(signal_semaphores);
+                const VkResult submit_result = vkQueueSubmit(device.lock()->get_queue(queue_type::graphics).value(), 1, &submit_info, in_flight_fence);
+                if (submit_result != VK_SUCCESS)
+                {
+                    logger::error("FAILED TO SUBMIT");
+                    return;
+                }
+                // command_buffer.submit(signal_semaphores);
                 
                 if (swapchain.has_value())
                 {
@@ -543,7 +576,8 @@ namespace blade
                         .waitSemaphoreCount = static_cast<u32>(signal_semaphores.size()),
                         .pWaitSemaphores = signal_semaphores.data(),
                         .swapchainCount = static_cast<u32>(swapchains.size()),
-                        .pSwapchains = swapchains.data()
+                        .pSwapchains = swapchains.data(),
+                        .pImageIndices = &current_image_index
                     };
 
                     vkQueuePresentKHR(device.lock()->get_queue(queue_type::graphics).value(), &present_info);

@@ -79,6 +79,8 @@ int main(void)
     while (!window->should_close())
     {
         gfx->set_viewport(frame, 0, 0, blade::width{ window->get_width() }, blade::height{ window->get_height() });
+
+        gfx->present();
     }
 
     

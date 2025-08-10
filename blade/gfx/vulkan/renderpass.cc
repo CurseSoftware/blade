@@ -35,9 +35,9 @@ namespace blade
 
                 VkRenderPassCreateInfo renderpass_info {
                     .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-                    .attachmentCount = 1,
+                    .attachmentCount = static_cast<u32>(info.attachments.size()),
                     .pAttachments = info.attachments.data(),
-                    .subpassCount = 1,
+                    .subpassCount = static_cast<u32>(info.subpass_descriptions.size()),
                     .pSubpasses = info.subpass_descriptions.data(),
                     .dependencyCount = static_cast<u32>(info.subpass_dependencies.size()),
                     .pDependencies = info.subpass_dependencies.data()
