@@ -7,6 +7,16 @@ namespace blade
     {
         namespace vk
         {
+            command_pool::command_pool(
+                VkCommandPool pool
+                , std::weak_ptr<class device> device
+                , const VkAllocationCallbacks* callbacks
+            ) noexcept
+                : _command_pool{ pool }
+                , _device{ device }
+                , _allocation_callbacks{ callbacks }
+            {}
+
             std::optional<std::shared_ptr<command_pool>> command_pool::builder::build() const noexcept
             {
                 const auto flags = [this]() -> VkCommandPoolCreateFlagBits {

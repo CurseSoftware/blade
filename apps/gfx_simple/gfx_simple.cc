@@ -8,8 +8,11 @@ namespace fs = blade::resources::fs;
 
 int main(void)
 {
-    const auto width = blade::width(800);
-    const auto height = blade::height(800);
+    constexpr blade::u32 FRAME_WIDTH = 800;
+    constexpr blade::u32 FRAME_HEIGHT = 600;
+    
+    const auto width = blade::width(FRAME_WIDTH);
+    const auto height = blade::height(FRAME_HEIGHT);
     
     auto window_opt = blade::window::create(
         "Blade Window",
@@ -21,8 +24,8 @@ int main(void)
 
     gfx::init_info init {};
     init.type = gfx::init_info::type::VULKAN;
-    init.resolution.width = 800;
-    init.resolution.height = 600;
+    init.resolution.width = FRAME_WIDTH;
+    init.resolution.height = FRAME_HEIGHT;
     init.resolution.reset = gfx::resolution::reset::VSYNC;
     init.enable_debug = true;
     init.headless = false;

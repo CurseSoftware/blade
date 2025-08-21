@@ -311,58 +311,6 @@ namespace blade
                 };
             }
 
-            bool view::create_framebuffers(std::weak_ptr<class renderpass> renderpass) noexcept
-            {
-                usize num_images = 1;
-                if (swapchain.has_value())
-                {
-                    num_images = swapchain.value().get()->num_image_views();
-                }
-
-                // framebuffers.resize(num_images);
-                // logger::info("Num Images: {}", framebuffers.size());
-
-                for (usize i = 0; i < num_images; i++)
-                {
-                    logger::info("Creating Vulkan Framebuffer {}", i);
-                    std::array<VkImageView, 1> attachments = {
-                        swapchain.value().get()->get_image_view(i)
-                    };
-
-                    if (renderpass.lock()->handle() == VK_NULL_HANDLE)
-                    {
-                        logger::info("REND NULL");
-                    }
-
-                    VkFramebufferCreateInfo framebuffer_info {
-                        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                        .renderPass = renderpass.lock()->handle(),
-                        .attachmentCount = static_cast<u32>(attachments.size()),
-                        .pAttachments = attachments.data(),
-                        .width = swapchain.value().get()->get_extent().width,
-                        .height = swapchain.value().get()->get_extent().height,
-                        .layers = 1
-                    };
-                    logger::info("Framebuffer info");
-
-                    VkFramebuffer framebuffer;
-                    const VkResult result = vkCreateFramebuffer(
-                        device.lock()->handle(),
-                        &framebuffer_info,
-                        allocation_callbacks,
-                        &framebuffer
-                    );
-                    framebuffers.push_back(framebuffer);
-
-                    if (result != VK_SUCCESS)
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
             program_handle vulkan_backend::create_view_program(
                 const framebuffer_handle framebuffer
                 , const shader_handle vert
@@ -388,24 +336,11 @@ namespace blade
                     .fragment = frag
                 };
 
-                view->second.program = program;
-
                 program_handle handle { program_handle_id };
 
                 _programs.insert(std::make_pair(handle, program));
 
-                view->second.pipeline_builder.get()
-                    ->add_shader(shader::type::vertex, _shaders.find(vert)->second.handle())
-                    .add_shader(shader::type::fragment, _shaders.find(frag)->second.handle());
-
-                logger::info("Added shaders to pipeline");
-
-                view->second.create_framebuffers(view->second.renderpass);
-                logger::info("Framebuffers created");
-
-                view->second.graphics_pipeline = view->second.pipeline_builder
-                    ->add_renderpass(view->second.renderpass->handle())
-                    .build().value();
+                view->second.create_program(program, _shaders.find(vert)->second, _shaders.find(frag)->second);
 
                 program_handle_id += 1;
 

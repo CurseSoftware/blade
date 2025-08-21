@@ -18,9 +18,7 @@ namespace blade
             class command_buffer
             {
                 public:
-                    [[nodiscard]] explicit command_buffer(VkCommandBuffer buffer) noexcept
-                        : _buffer { buffer }
-                    {}
+                    [[nodiscard]] explicit command_buffer(VkCommandBuffer buffer) noexcept;
 
                     VkCommandBuffer handle() const noexcept { return _buffer; }
 
@@ -34,31 +32,16 @@ namespace blade
                     class recording 
                     {
                         public:
-                            recording(command_buffer& cb)
-                                 : _buffer{ cb }
-                            {}
+                            [[nodiscard]] explicit recording(command_buffer& cb) noexcept;
 
-                            ~recording() noexcept
-                            {
-                                _buffer.is_recording = false;
-                            }
+                            ~recording() noexcept;
 
                             recording(const recording&) = delete;
                             recording& operator=(const recording&) = delete;
 
-                            recording(recording&& other) noexcept
-                                : _buffer{ other._buffer }
-                            {}
+                            recording(recording&& other) noexcept;
 
-                            recording& operator=(recording&& other) noexcept
-                            {
-                                if (this != &other)
-                                {
-                                    _buffer = other._buffer;
-                                }
-
-                                return *this;
-                            }
+                            recording& operator=(recording&& other) noexcept;
 
                             class record_renderpass
                             {
@@ -69,41 +52,15 @@ namespace blade
                                         , VkFramebuffer framebuffer
                                         , const std::vector<VkClearValue>& clear_values
                                         , VkRect2D render_area
-                                    ) noexcept
-                                        : _recording{ rec }
-                                        , _renderpass{ rp }
-                                        , _active{ true }
-                                    {
-                                        VkRenderPassBeginInfo pass_info {
-                                            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-                                            .renderPass = _renderpass.lock()->handle(),
-                                            .framebuffer = framebuffer,
-                                            .renderArea = render_area,
-                                            .clearValueCount = static_cast<u32>(clear_values.size()),
-                                            .pClearValues = clear_values.data()
-                                        };
-                                        
-                                        vkCmdBeginRenderPass(rec._buffer.handle(), &pass_info, VK_SUBPASS_CONTENTS_INLINE);
-                                    }
-
-                                    ~record_renderpass() noexcept
-                                    {
-                                        if (_active)
-                                        {
-                                            logger::warn("Renderpass Recording destroying without being submitted");
-                                        }
-                                    }
+                                    ) noexcept;
+                                    
+                                    ~record_renderpass() noexcept;
 
                                     record_renderpass(const record_renderpass&) = delete;
                                     record_renderpass& operator=(const record_renderpass&) = delete;
 
                                     record_renderpass& operator=(record_renderpass&&) = delete;
-                                    record_renderpass(record_renderpass&& other) noexcept
-                                        : _recording{ other._recording }
-                                        , _renderpass{ other._renderpass }
-                                        , _active{ other._active }
-                                    {
-                                    }
+                                    record_renderpass(record_renderpass&& other) noexcept;
 
                                     void bind_pipeline(VkPipelineBindPoint bind_point, VkPipeline pipeline) const noexcept;
                                     void set_viewport(VkViewport viewport) const noexcept;
@@ -132,15 +89,12 @@ namespace blade
             class command_pool
             {
                 public:
+                    [[nodiscard]] explicit command_pool() noexcept;
                     [[nodiscard]] explicit command_pool(
                         VkCommandPool pool
                         , std::weak_ptr<class device> device
                         , const VkAllocationCallbacks* callbacks
-                    ) noexcept
-                        : _command_pool{ pool }
-                        , _device{ device }
-                        , _allocation_callbacks{ callbacks }
-                    {}
+                    ) noexcept;
 
                     command_buffer& get_buffer(u32 index) const noexcept { return *_buffer_handlers[index].get(); }
 
@@ -182,7 +136,6 @@ namespace blade
                         } info {};
                     };
 
-                    [[nodiscard]] explicit command_pool() noexcept;
                 private:
                     std::weak_ptr<class device> _device                           {};
                     VkCommandPool _command_pool                                   { VK_NULL_HANDLE };

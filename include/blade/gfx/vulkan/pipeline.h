@@ -33,16 +33,17 @@ namespace blade
 
                             std::optional<std::shared_ptr<pipeline>> build() const noexcept;
 
+                            builder& add_dynamic_state(const VkDynamicState dynamic_state) noexcept;
                             builder& set_type(const enum type type) noexcept;
                             builder& use_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept;
                             builder& use_blending(const bool enabled = true) noexcept;
-                            builder& use_multisampling(const bool enabled = true) noexcept;
+                            builder& add_multisampling(const bool enabled = true) noexcept;
                             builder& add_renderpass(const VkRenderPass& renderpass) noexcept;
                             builder& add_shader(shader::type type, const VkShaderModule&) noexcept;
                             builder& set_render_pass(const VkRenderPass& renderpass) noexcept;
                             builder& set_pipeline_layout(const VkPipelineLayout& layout) noexcept;
-                            builder& add_viewport(const VkViewport& viewport) noexcept;
-                            builder& add_scissor(const VkRect2D& viewport) noexcept;
+                            builder& add_viewport(const VkViewport viewport) noexcept;
+                            builder& add_scissor(const VkRect2D scissor) noexcept;
                             builder& set_extent(VkExtent2D extent) noexcept;
                             
                             struct
@@ -51,6 +52,7 @@ namespace blade
                                 std::vector<VkViewport> viewports                          {};
                                 std::vector<VkRect2D> scissors                             {};
                                 std::vector<VkPipelineShaderStageCreateInfo> shader_stages {};
+                                std::vector<VkDynamicState> dynamic_states                 {};
                                 VkAllocationCallbacks* allocation_callbacks                { nullptr };
                                 VkExtent2D extent                                          {};
                                 VkPipelineLayout pipeline_layout                           { VK_NULL_HANDLE };

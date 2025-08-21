@@ -8,8 +8,13 @@ namespace blade
         namespace vk
         {
             ////////////////////////////////////////////////
-            ///               RENDERPASS                 ///
+            ///             COMMAND BUFFER               ///
             ////////////////////////////////////////////////
+
+            command_buffer::command_buffer(VkCommandBuffer buffer) noexcept
+                : _buffer{ buffer }
+            {}
+
             void command_buffer::reset() const noexcept
             {
                 const u32 flags = 0;
@@ -35,6 +40,33 @@ namespace blade
                 return recording::create(*this, begin_info);
             }
             
+            ////////////////////////////////////////////////
+            ///               RECORDING                 ///
+            ////////////////////////////////////////////////
+
+            command_buffer::recording::recording(command_buffer& cb) noexcept
+                : _buffer { cb }
+            {}
+
+            command_buffer::recording::~recording() noexcept
+            {
+                _buffer.is_recording = false;
+            }
+
+            command_buffer::recording::recording(recording&& other) noexcept
+                : _buffer{ other._buffer }
+            {}
+
+            command_buffer::recording& command_buffer::recording::operator=(recording&& other) noexcept
+            {
+                if (this != &other)
+                {
+                    _buffer = other._buffer;
+                }
+
+                return *this;
+            }
+
             std::optional<command_buffer::recording> command_buffer::recording::create(command_buffer& cb, VkCommandBufferBeginInfo begin_info) noexcept
             {
                 auto rec = recording(cb);
@@ -49,15 +81,50 @@ namespace blade
                 
                 return rec;
             }
+            
+            ////////////////////////////////////////////////
+            ///               RENDERPASS                 ///
+            ////////////////////////////////////////////////
+            command_buffer::recording::record_renderpass::record_renderpass(
+                    recording& rec
+                    , std::weak_ptr<renderpass> rp
+                    , VkFramebuffer framebuffer
+                    , const std::vector<VkClearValue>& clear_values
+                    , VkRect2D render_area
+                    ) noexcept
+                : _recording{ rec }
+                , _renderpass{ rp }
+                , _active{ true }
+            {
+                VkRenderPassBeginInfo pass_info {
+                    .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                        .renderPass = _renderpass.lock()->handle(),
+                        .framebuffer = framebuffer,
+                        .renderArea = render_area,
+                        .clearValueCount = static_cast<u32>(clear_values.size()),
+                        .pClearValues = clear_values.data()
+                };
+
+                vkCmdBeginRenderPass(rec._buffer.handle(), &pass_info, VK_SUBPASS_CONTENTS_INLINE);
+            }
+
+            command_buffer::recording::record_renderpass::~record_renderpass() noexcept
+            {
+                if (_active)
+                {
+                    logger::warn("Renderpass Recording destroying without being submitted");
+                }
+            }
+            command_buffer::recording::record_renderpass::record_renderpass(record_renderpass&& other) noexcept
+                : _recording{ other._recording }
+                , _renderpass{ other._renderpass }
+                , _active{ other._active }
+            {}
 
             command_buffer::recording::record_renderpass command_buffer::recording::begin_renderpass(std::weak_ptr<renderpass> rp, VkFramebuffer framebuffer,  const std::vector<VkClearValue>& clear_values, VkRect2D render_area) noexcept
             {
                 return record_renderpass(*this, rp, framebuffer, clear_values, render_area);
             }
-
-            ////////////////////////////////////////////////
-            ///               RENDERPASS                 ///
-            ////////////////////////////////////////////////
 
             void command_buffer::recording::record_renderpass::bind_pipeline(VkPipelineBindPoint bind_point, VkPipeline pipeline) const noexcept
             {

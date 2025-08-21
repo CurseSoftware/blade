@@ -19,35 +19,49 @@ namespace blade
     {
         namespace vk
         {
-            struct view
+            class view
             {
-                std::weak_ptr<class device> device                        {};
-                std::shared_ptr<struct surface> surface                   { nullptr };
-                std::optional<std::unique_ptr<class swapchain>> swapchain { std::nullopt };
-                std::vector<VkFramebuffer> framebuffers                   {};
-                VkAllocationCallbacks* allocation_callbacks               { nullptr };
-                std::unique_ptr<class pipeline::builder> pipeline_builder { nullptr };
-                std::shared_ptr<class pipeline> graphics_pipeline         { nullptr };
-                std::shared_ptr<class renderpass> renderpass              { nullptr };
-                struct program program                                    {};
-                VkViewport viewport                                       {};
-                VkSemaphore image_available_semaphore                     {};
-                VkSemaphore render_finished_semaphore                     {};
-                VkFence in_flight_fence                                   {};
-                u32 current_image_index                                   { 0 };
+                public:
+                    view(std::weak_ptr<class device> device, std::shared_ptr<class surface> surface) noexcept;
 
-                void destroy() noexcept;
-                bool create_framebuffers(std::weak_ptr<class renderpass> renderpass) noexcept;
+                    void destroy() noexcept;
+                    bool create_framebuffers() noexcept;
 
-                void set_viewport(f32 x, f32 y, struct width width, struct height height) noexcept;
-               
-                void record_commands(class command_buffer& command_buffer) const noexcept;
+                    void set_viewport(f32 x, f32 y, struct width width, struct height height) noexcept;
+                   
+                    void record_commands(class command_buffer& command_buffer) const noexcept;
 
-                void frame(class command_buffer& command_buffer) noexcept;
+                    void frame(class command_buffer& command_buffer) noexcept;
 
-                VkExtent2D get_extent() const noexcept;
+                    VkExtent2D get_extent() const noexcept;
 
-                static std::optional<view> create(std::weak_ptr<class instance> instance, std::weak_ptr<class device> device, const framebuffer_create_info info) noexcept;
+                    static std::optional<view> create(std::weak_ptr<class instance> instance, std::weak_ptr<class device> device, const framebuffer_create_info info) noexcept;
+
+                    bool create_program(const struct program& program, const shader& vertex, const shader& fragment) noexcept;
+
+                    std::weak_ptr<class pipeline> get_graphics_pipeline() const noexcept { return graphics_pipeline; }
+
+                private:
+                    bool create_swapchain_(struct width width, struct height height) noexcept;
+                    bool create_renderpass_() noexcept;
+                    VkFormat get_format_() const noexcept;
+                   
+                private:
+                    std::weak_ptr<class device> device                        {};
+                    std::shared_ptr<struct surface> surface                   { nullptr };
+                    std::optional<std::unique_ptr<class swapchain>> swapchain { std::nullopt };
+                    std::vector<VkFramebuffer> framebuffers                   {};
+                    VkAllocationCallbacks* allocation_callbacks               { nullptr };
+                    std::unique_ptr<class pipeline::builder> pipeline_builder { nullptr };
+                    std::shared_ptr<class pipeline> graphics_pipeline         { nullptr };
+                    std::shared_ptr<class renderpass> renderpass              { nullptr };
+                    struct program program                                    {};
+                    VkViewport viewport                                       {};
+                    VkSemaphore image_available_semaphore                     {};
+                    VkSemaphore render_finished_semaphore                     {};
+                    VkFence in_flight_fence                                   {};
+                    u32 current_image_index                                   { 0 };
+
             };
 
         } // vk namespace

@@ -13,10 +13,10 @@ namespace blade
         {
             std::optional<std::shared_ptr<pipeline>> pipeline::builder::build() const noexcept
             {
-                std::array<VkDynamicState, 2> dynamic_states = {
-                    VK_DYNAMIC_STATE_VIEWPORT
-                    , VK_DYNAMIC_STATE_SCISSOR
-                };
+//                std::array<VkDynamicState, 2> dynamic_states = {
+//                    VK_DYNAMIC_STATE_VIEWPORT
+//                    , VK_DYNAMIC_STATE_SCISSOR
+//                };
 
                 // class pipeline pipeline { info.device };
                 auto pipeline = std::make_shared<class pipeline>(info.device);
@@ -25,8 +25,8 @@ namespace blade
                 VkPipelineDynamicStateCreateInfo dynamic_state {
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
                     .flags = 0,
-                    .dynamicStateCount = static_cast<u32>(dynamic_states.size()),
-                    .pDynamicStates = dynamic_states.data(),
+                    .dynamicStateCount = static_cast<u32>(info.dynamic_states.size()),
+                    .pDynamicStates = info.dynamic_states.data(),
                 };
 
                 VkPipelineVertexInputStateCreateInfo vertex_input {
@@ -43,26 +43,12 @@ namespace blade
                     .primitiveRestartEnable = VK_FALSE
                 };
 
-                VkViewport viewport {
-                    .x = 0.0f,
-                    .y = 0.0f,
-                    .width = static_cast<float>(info.extent.width),
-                    .height = static_cast<float>(info.extent.height),
-                    .minDepth = 0.0f,
-                    .maxDepth = 1.0f
-                };
-
-                VkRect2D scissor {
-                    .offset = { 0, 0 },
-                    .extent = info.extent
-                };
-
                 VkPipelineViewportStateCreateInfo viewport_state {
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-                    .viewportCount = 1,
-                    .pViewports = &viewport,
-                    .scissorCount = 1,
-                    .pScissors = &scissor
+                    .viewportCount = static_cast<u32>(info.viewports.size()),
+                    .pViewports = info.viewports.data(),
+                    .scissorCount = static_cast<u32>(info.scissors.size()),
+                    .pScissors = info.scissors.data()
                 };
 
                 VkPipelineRasterizationStateCreateInfo rasterizer {
@@ -170,10 +156,31 @@ namespace blade
                 return pipeline;
             }
 
+            pipeline::builder& pipeline::builder::add_dynamic_state(const VkDynamicState dynamic_state) noexcept
+            {
+                info.dynamic_states.push_back(dynamic_state);
+
+                return *this;
+            }
+
             pipeline::builder& pipeline::builder::set_type(const enum type type) noexcept
             {
                 info.type = type;
 
+                return *this;
+            }
+
+            pipeline::builder& pipeline::builder::add_viewport(const VkViewport viewport) noexcept
+            {
+                info.viewports.push_back(viewport);
+                
+                return *this;
+            }
+            
+            pipeline::builder& pipeline::builder::add_scissor(const VkRect2D scissor) noexcept
+            {
+                info.scissors.push_back(scissor);
+                
                 return *this;
             }
 
@@ -202,6 +209,8 @@ namespace blade
                 
                 return *this;
             }
+
+            // pipeline::builder& pipeline::builder::add_multisampling(VkPipeline
             
             pipeline::builder& pipeline::builder::add_renderpass(const VkRenderPass& renderpass) noexcept
             {

@@ -1,4 +1,6 @@
 #include "gfx/vulkan/view.h"
+#include "gfx/program.h"
+#include <vulkan/vulkan_core.h>
 
 namespace blade
 {
@@ -6,6 +8,12 @@ namespace blade
     {
         namespace vk
         {
+            view::view(std::weak_ptr<class device> device, std::shared_ptr<class surface> surface) noexcept
+                : device{ device }
+                , surface { surface }
+                , pipeline_builder{ std::make_unique<pipeline::builder>(device) }
+            {}
+            
             std::optional<view> view::create(std::weak_ptr<class instance> instance, std::weak_ptr<class device> device, const framebuffer_create_info info) noexcept
             {
                 auto surface_opt = surface::create(instance, info);
@@ -16,74 +24,31 @@ namespace blade
                 }
 
                 auto surface = surface_opt.value();
-
-                struct view view {
-                    .device = device,
-                    .surface = surface,
-                    .pipeline_builder = std::make_unique<pipeline::builder>(device)
-                };
+                class view view(device, surface);
 
                 if (info.native_window_data)
                 {
                     logger::info("Creating swapchain...");
-                    view.swapchain = swapchain::builder(device, view.surface)
-                        .set_allocation_callbacks(nullptr)
-                        .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
-                        .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-                        .set_clipped(VK_TRUE)
-                        .set_extent(info.width, info.height)
-                        .prefer_present_mode(present_mode::MAILBOX)
-                        .build();
-
-                    if (!view.swapchain.has_value())
-                    {
-                        logger::error("Failed to create swapchain");
-                        return std::nullopt;
-                    }
-                    
-                    VkAttachmentDescription color_attachment {
-                        .format = view.swapchain.value()->get_format(),
-                        .samples = VK_SAMPLE_COUNT_1_BIT,
-                        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-                    };
-                    
-                    VkAttachmentReference color_attachment_reference {
-                        .attachment = 0,
-                        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    };
-
-                    VkSubpassDescription subpass {
-                        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        .colorAttachmentCount = 1,
-                        .pColorAttachments = &color_attachment_reference,
-                    };
-               
-                    VkSubpassDependency dependency {
-                        .srcSubpass = VK_SUBPASS_EXTERNAL,
-                        .dstSubpass = 0,
-                        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                    };
-
-                    view.renderpass = renderpass::builder(device)
-                        .add_subpass_description(subpass)
-                        .add_attachment(color_attachment)
-                        .add_subpass_dependency(dependency)
-                        .build()
-                        .value();
-
-
-                    view.pipeline_builder.get()->set_extent(view.swapchain.value()->get_extent());
+                    view.create_swapchain_(info.width, info.height);
 
                     logger::info("Swapchain created.");
                 }
+
+                (void) view.create_renderpass_();
+                view.pipeline_builder
+                    // ->set_extent(view.get_extent())
+                    ->add_viewport(VkViewport  {
+                        .x = 0.0f,
+                        .y = 0.0f,
+                        .width =  static_cast<f32>(view.get_extent().width),
+                        .height = static_cast<f32>(view.get_extent().height),
+                        .minDepth = 0.0f,
+                        .maxDepth = 1.0f
+                    })
+                    .add_scissor(VkRect2D {
+                        .offset = { 0, 0 },
+                        .extent = view.get_extent()
+                    });
 
                 VkSemaphoreCreateInfo semaphore_info { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
                 VkFenceCreateInfo fence_info { 
@@ -103,11 +68,87 @@ namespace blade
                     return std::nullopt;
                 }
 
+                view.create_framebuffers();
+
                 return view;
+            }
+
+            VkFormat view::get_format_() const noexcept
+            {
+                if (swapchain.has_value())
+                {
+                    return swapchain.value()->get_format();
+                }
+
+                // TODO: This is random and will 99.99% not work
+                return VK_FORMAT_R8_SINT;
+            }
+
+            bool view::create_renderpass_() noexcept
+            {
+                VkAttachmentDescription color_attachment {
+                    .format = get_format_(),
+                    .samples = VK_SAMPLE_COUNT_1_BIT,
+                    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+                };
+                
+                VkAttachmentReference color_attachment_reference {
+                    .attachment = 0,
+                    .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                };
+
+                VkSubpassDescription subpass {
+                    .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    .colorAttachmentCount = 1,
+                    .pColorAttachments = &color_attachment_reference,
+                };
+           
+                VkSubpassDependency dependency {
+                    .srcSubpass = VK_SUBPASS_EXTERNAL,
+                    .dstSubpass = 0,
+                    .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                };
+
+                renderpass = renderpass::builder(device)
+                    .add_subpass_description(subpass)
+                    .add_attachment(color_attachment)
+                    .add_subpass_dependency(dependency)
+                    .build()
+                    .value();
+
+                return true;
+            }
+
+            bool view::create_swapchain_(struct width width, struct height height) noexcept
+            {
+                swapchain = swapchain::builder(device, surface)
+                    .set_allocation_callbacks(nullptr)
+                    .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+                    .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+                    .set_clipped(VK_TRUE)
+                    .set_extent(width, height)
+                    .prefer_present_mode(present_mode::MAILBOX)
+                    .build();
+
+                if (!swapchain.has_value())
+                {
+                    return false;
+                }
+
+                return true;
             }
 
             void view::set_viewport(f32 x, f32 y, struct width width, struct height height) noexcept
             {
+                // logger::info("Viewport: {}, {}", width.w, height.h);
                 viewport = VkViewport {
                     .x = x,
                     .y = y,
@@ -117,7 +158,65 @@ namespace blade
                     .maxDepth = 1.f
                 };
             }
+
+            bool view::create_program(const struct program& program, const shader& vertex, const shader& fragment) noexcept
+            {
+                this->program = program;
+                graphics_pipeline = pipeline_builder
+                    ->add_shader(shader::type::vertex, vertex.handle())
+                    .add_shader(shader::type::fragment, fragment.handle())
+                    .add_renderpass(renderpass->handle())
+                    .add_dynamic_state(VK_DYNAMIC_STATE_VIEWPORT)
+                    .add_dynamic_state(VK_DYNAMIC_STATE_SCISSOR)
+                    .build().value();
+
+                return true;
+            }
             
+            bool view::create_framebuffers() noexcept
+            {
+                usize num_images = 1;
+                if (swapchain.has_value())
+                {
+                    num_images = swapchain.value().get()->num_image_views();
+                }
+
+                for (usize i = 0; i < num_images; i++)
+                {
+                    logger::info("Creating Vulkan Framebuffer {}", i);
+                    std::array<VkImageView, 1> attachments = {
+                        swapchain.value().get()->get_image_view(i)
+                    };
+
+                    VkFramebufferCreateInfo framebuffer_info {
+                        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                        .renderPass = renderpass->handle(),
+                        .attachmentCount = static_cast<u32>(attachments.size()),
+                        .pAttachments = attachments.data(),
+                        .width = swapchain.value().get()->get_extent().width,
+                        .height = swapchain.value().get()->get_extent().height,
+                        .layers = 1
+                    };
+                    logger::info("Framebuffer info");
+
+                    VkFramebuffer framebuffer;
+                    const VkResult result = vkCreateFramebuffer(
+                        device.lock()->handle(),
+                        &framebuffer_info,
+                        allocation_callbacks,
+                        &framebuffer
+                    );
+                    framebuffers.push_back(framebuffer);
+
+                    if (result != VK_SUCCESS)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
             void view::frame(class command_buffer& command_buffer) noexcept
             {
                 
