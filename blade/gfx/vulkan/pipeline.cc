@@ -39,10 +39,10 @@ namespace blade
                 };
 
                 // Move this into add_viewport method and make build() a const method
-                info.viewport_info.viewportCount = static_cast<u32>(info.viewports.size());
-                info.viewport_info.pViewports = info.viewports.data();
-                info.viewport_info.scissorCount = static_cast<u32>(info.scissors.size());
-                info.viewport_info.pScissors = info.scissors.data();
+//                info.viewport_info.viewportCount = static_cast<u32>(info.viewports.size());
+//                info.viewport_info.pViewports = info.viewports.data();
+//                info.viewport_info.scissorCount = static_cast<u32>(info.scissors.size());
+//                info.viewport_info.pScissors = info.scissors.data();
 
                 if (VK_SUCCESS != vkCreatePipelineLayout(
                     info.device.lock()->handle(), 
@@ -115,6 +115,8 @@ namespace blade
             pipeline::builder& pipeline::builder::add_viewport(const VkViewport viewport) noexcept
             {
                 info.viewports.push_back(viewport);
+                info.viewport_info.viewportCount = static_cast<u32>(info.viewports.size());
+                info.viewport_info.pViewports = info.viewports.data();
                 
                 return *this;
             }
@@ -122,6 +124,8 @@ namespace blade
             pipeline::builder& pipeline::builder::add_scissor(const VkRect2D scissor) noexcept
             {
                 info.scissors.push_back(scissor);
+                info.viewport_info.scissorCount = static_cast<u32>(info.scissors.size());
+                info.viewport_info.pScissors = info.scissors.data();
                 
                 return *this;
             }
