@@ -5,5 +5,6 @@
 #include "resources/resources.h"
 #include "window/window.h"
 #include "gfx/gfx.h"
+#include "math/math.h"
 
 #endif // BLADE_BLADE_H

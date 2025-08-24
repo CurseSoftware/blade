@@ -1,10 +1,15 @@
 #include "core/types.h"
 #include "gfx/handle.h"
+#include "gfx/vertex.h"
+#include "math/operations.h"
+#include "math/vec2.h"
+#include <array>
 #include <blade/blade.h>
 
 namespace logger = blade::logger;
 namespace gfx = blade::gfx;
 namespace fs = blade::resources::fs;
+namespace math = blade::math;
 
 int main(void)
 {
@@ -19,6 +24,10 @@ int main(void)
         width,
         height
     );
+
+    math::vec3<float> a = { 1.0, 2.0, 3.0 };
+    math::vec3<float> b = { 5.0, 6.0, 7.0 };
+    logger::trace("CROSS(a,b): {}", math::cross(a, b).to_string());
 
     auto window = std::move(window_opt.value());
 

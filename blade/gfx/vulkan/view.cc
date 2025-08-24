@@ -48,7 +48,9 @@ namespace blade
                     .add_scissor(VkRect2D {
                         .offset = { 0, 0 },
                         .extent = view.get_extent()
-                    });
+                    })
+                    // .set_rasterization_polygon_mode(VK_POLYGON_MODE_LINE)
+                    ;
 
                 VkSemaphoreCreateInfo semaphore_info { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
                 VkFenceCreateInfo fence_info { 

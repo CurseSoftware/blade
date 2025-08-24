@@ -11,9 +11,8 @@ namespace blade
     {
         namespace vk
         {
-            std::optional<std::shared_ptr<pipeline>> pipeline::builder::build() noexcept
+            std::optional<std::shared_ptr<pipeline>> pipeline::builder::build() const noexcept
             {
-                // class pipeline pipeline { info.device };
                 auto pipeline = std::make_shared<class pipeline>(info.device);
 
 
@@ -37,12 +36,6 @@ namespace blade
                     .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
                     .primitiveRestartEnable = VK_FALSE
                 };
-
-                // Move this into add_viewport method and make build() a const method
-//                info.viewport_info.viewportCount = static_cast<u32>(info.viewports.size());
-//                info.viewport_info.pViewports = info.viewports.data();
-//                info.viewport_info.scissorCount = static_cast<u32>(info.scissors.size());
-//                info.viewport_info.pScissors = info.scissors.data();
 
                 if (VK_SUCCESS != vkCreatePipelineLayout(
                     info.device.lock()->handle(), 
@@ -225,6 +218,13 @@ namespace blade
             pipeline::builder& pipeline::builder::set_rasterization_pnext(const void* p_next) noexcept
             {
                 info.rasterization_info.pNext = p_next;
+
+                return *this;
+            }
+
+            pipeline::builder& pipeline::builder::set_rasterization_polygon_mode(const VkPolygonMode polygon) noexcept
+            {
+                info.rasterization_info.polygonMode = polygon;
 
                 return *this;
             }

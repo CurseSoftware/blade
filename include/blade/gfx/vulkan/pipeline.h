@@ -31,7 +31,7 @@ namespace blade
                                 : info { device }
                             {}
 
-                            std::optional<std::shared_ptr<pipeline>> build() noexcept;
+                            std::optional<std::shared_ptr<pipeline>> build() const noexcept;
 
                             builder& add_dynamic_state(const VkDynamicState dynamic_state) noexcept;
                             builder& set_type(const enum type type) noexcept;
@@ -64,6 +64,7 @@ namespace blade
                             builder& set_rasterization_depth_bias_slope_factor(const f32) noexcept;
                             builder& set_rasterization_line_width(const f32) noexcept;
                             builder& set_rasterization_pnext(const void*) noexcept;
+                            builder& set_rasterization_polygon_mode(const VkPolygonMode) noexcept;
 
                             builder& set_multisampler_rasterization_samples(const VkSampleCountFlagBits) noexcept;
                             builder& set_multisampler_sample_shading(const VkBool32) noexcept;
