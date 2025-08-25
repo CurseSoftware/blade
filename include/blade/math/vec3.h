@@ -26,11 +26,6 @@ namespace blade
                 : _data{ arr }
             {}
 
-            [[nodiscard]] std::string to_string() const noexcept
-            {
-                return "(" + std::to_string(_data[0]) + "," + std::to_string(_data[1]) + "," + std::to_string(_data[2]) + ")";
-            }
-
             vec3(const vec3& other) noexcept
             {
                 _data[0] = other._data[0];
@@ -59,7 +54,7 @@ namespace blade
                 if (this != &other)
                 {
                     _data[0] = other._data[0];
-                    _data[0] = other._data[0];
+                    _data[1] = other._data[1];
                     _data[2] = other._data[2];
                 }
 
@@ -74,6 +69,11 @@ namespace blade
                 }
 
                 return _data[idx];
+            }
+
+            [[nodiscard]] std::string to_string() const noexcept
+            {
+                return "(" + std::to_string(_data[0]) + "," + std::to_string(_data[1]) + "," + std::to_string(_data[2]) + ")";
             }
 
             [[nodiscard]] T magnitude() const noexcept

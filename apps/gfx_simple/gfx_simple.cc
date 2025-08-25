@@ -25,10 +25,6 @@ int main(void)
         height
     );
 
-    math::vec3<float> a = { 1.0, 2.0, 3.0 };
-    math::vec3<float> b = { 5.0, 6.0, 7.0 };
-    logger::trace("CROSS(a,b): {}", math::cross(a, b).to_string());
-
     auto window = std::move(window_opt.value());
 
     gfx::init_info init {};
@@ -38,6 +34,12 @@ int main(void)
     init.resolution.reset = gfx::resolution::reset::VSYNC;
     init.enable_debug = true;
     init.headless = false;
+
+    gfx::vertex_layout vlayout {};
+    vlayout.begin().value().get()
+        .add("position", 3, gfx::attribute::datatype::f32)
+        .end();
+    vlayout.print();
 
     auto gfx = gfx::renderer::create(init);
     if (!gfx)

@@ -2,6 +2,7 @@
 #include "core/types.h"
 #include "gfx/handle.h"
 #include "gfx/program.h"
+#include "gfx/vertex.h"
 #include "gfx/view.h"
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/platform.h"
@@ -347,6 +348,11 @@ namespace blade
                 return handle;
             }
 
+            buffer_handle vulkan_backend::create_vertex_buffer(const vertex_layout& layout) noexcept
+            {
+                // TODO
+                return { BLADE_NULL_HANDLE };
+            }
 
 
         } // vk namespace

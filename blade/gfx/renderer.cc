@@ -1,5 +1,6 @@
 #include "gfx/renderer.h"
 #include "gfx/handle.h"
+#include "gfx/vertex.h"
 #include "gfx/view.h"
 #include "gfx/vulkan/renderer.h"
 
@@ -83,6 +84,16 @@ namespace blade
             }
 
             return program_handle { BLADE_NULL_HANDLE };
+        }
+
+        buffer_handle renderer::create_vertex_buffer(const vertex_layout& layout) noexcept
+        {
+            if (_backend)
+            {
+                return _backend->create_vertex_buffer(layout);
+            }
+
+            return buffer_handle { BLADE_NULL_HANDLE };
         }
 
         void renderer::set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) const noexcept

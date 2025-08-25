@@ -77,6 +77,11 @@ namespace blade
                 return _data[0] * _data[0] + _data[1] * _data[1];
             }
 
+            [[nodiscard]] std::string to_string() const noexcept
+            {
+                return "(" + std::to_string(_data[0]) + "," + std::to_string(_data[1]) + ")";
+            }
+
             T _data[2] { 0.f, 0.f };
         };
 

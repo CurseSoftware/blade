@@ -1,5 +1,6 @@
 #include "gfx/handle.h"
 #include "gfx/renderer.h"
+#include "gfx/vertex.h"
 #include "gfx/view.h"
 #include "gfx/program.h"
 #include "gfx/vulkan/command.h"
@@ -31,10 +32,9 @@ namespace blade
                     void frame() noexcept override;
                     void set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) noexcept override;
                     framebuffer_handle create_framebuffer(framebuffer_create_info) noexcept override;
-
                     shader_handle create_shader(const std::vector<u8>&) noexcept override;
-
                     program_handle create_view_program(const framebuffer_handle, const shader_handle, const shader_handle) noexcept override;
+                    buffer_handle create_vertex_buffer(const vertex_layout& layout) noexcept override;
 
                 private:
                     /// @brief Append platform-specific vulkan extensions to the list

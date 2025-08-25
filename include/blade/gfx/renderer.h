@@ -8,6 +8,7 @@
 
 #include "core/core.h"
 #include "gfx/handle.h"
+#include "gfx/vertex.h"
 #include "gfx/view.h"
 #include <memory>
 
@@ -60,6 +61,7 @@ namespace blade
                 virtual framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept = 0;
                 virtual shader_handle create_shader(const std::vector<u8>& mem) noexcept = 0;
                 virtual program_handle create_view_program(const framebuffer_handle framebuffer, const shader_handle vertex, const shader_handle fragment) noexcept = 0;
+                virtual buffer_handle create_vertex_buffer(const vertex_layout& layout) noexcept = 0;
                 virtual void set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) noexcept = 0;
 
                 virtual void submit() = 0;
@@ -73,15 +75,17 @@ namespace blade
         class renderer
         {
             public:
-                static std::unique_ptr<renderer> create(const init_info& init) noexcept;
+                [[nodiscard]] static std::unique_ptr<renderer> create(const init_info& init) noexcept;
 
                 void shutdown() noexcept;
 
-                framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept;
+                [[nodiscard]] framebuffer_handle create_framebuffer(framebuffer_create_info create_info) noexcept;
 
-                shader_handle create_shader(const std::vector<u8>& mem) noexcept;
+                [[nodiscard]] shader_handle create_shader(const std::vector<u8>& mem) noexcept;
 
-                program_handle create_view_program(const framebuffer_handle framebuffer, const shader_handle vertex, const shader_handle fragment) noexcept;
+                [[nodiscard]] program_handle create_view_program(const framebuffer_handle framebuffer, const shader_handle vertex, const shader_handle fragment) noexcept;
+
+                [[nodiscard]] buffer_handle create_vertex_buffer(const vertex_layout& layout) noexcept;
 
                 void set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) const noexcept;
 

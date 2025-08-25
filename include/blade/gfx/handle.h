@@ -37,6 +37,7 @@ MAKE_BLADE_HANDLE(framebuffer_handle);
 MAKE_BLADE_HANDLE(view_handle);
 MAKE_BLADE_HANDLE(shader_handle);
 MAKE_BLADE_HANDLE(program_handle);
+MAKE_BLADE_HANDLE(buffer_handle);
 
 #undef MAKE_BLADE_HANDLE
 
