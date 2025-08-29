@@ -4,6 +4,7 @@
 #include "gfx/program.h"
 #include "gfx/vertex.h"
 #include "gfx/view.h"
+#include "gfx/vulkan/buffer.h"
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/platform.h"
 #include "gfx/vulkan/shader.h"
@@ -348,13 +349,96 @@ namespace blade
                 return handle;
             }
 
-            buffer_handle vulkan_backend::create_vertex_buffer(const vertex_layout& layout) noexcept
+            void vulkan_backend::attach_vertex_buffer(const buffer_handle handle) noexcept
             {
-                // TODO
-                return { BLADE_NULL_HANDLE };
+                if (handle.index > _vertex_input_infos.size()-1)
+                {
+                    return;
+                }
+
+                // TODO: allow specifying of views
+                // _views[{ 0 }].attach_vertex_buffer(_vertex_input_infos[handle]);
             }
+            
+            static const VkFormat vertex_formats[][4][2] =
+            {
+                { // Uint8
+                    { VK_FORMAT_R8_UINT,                 VK_FORMAT_R8_UNORM                 },
+                    { VK_FORMAT_R8G8_UINT,               VK_FORMAT_R8G8_UNORM               },
+                    { VK_FORMAT_R8G8B8A8_UINT,           VK_FORMAT_R8G8B8A8_UNORM           },
+                    { VK_FORMAT_R8G8B8A8_UINT,           VK_FORMAT_R8G8B8A8_UNORM           },
+                },
+                { // Int16
+                    { VK_FORMAT_R16_SINT,                VK_FORMAT_R16_SNORM                },
+                    { VK_FORMAT_R16G16_SINT,             VK_FORMAT_R16G16_SNORM             },
+                    { VK_FORMAT_R16G16B16_SINT,          VK_FORMAT_R16G16B16_SNORM          },
+                    { VK_FORMAT_R16G16B16A16_SINT,       VK_FORMAT_R16G16B16A16_SNORM       },
+                },
+                { // Float
+                    { VK_FORMAT_R32_SFLOAT,              VK_FORMAT_R32_SFLOAT               },
+                    { VK_FORMAT_R32G32_SFLOAT,           VK_FORMAT_R32G32_SFLOAT            },
+                    { VK_FORMAT_R32G32B32_SFLOAT,        VK_FORMAT_R32G32B32_SFLOAT         },
+                    { VK_FORMAT_R32G32B32A32_SFLOAT,     VK_FORMAT_R32G32B32A32_SFLOAT      },
+                },
+                { // Uint10
+                    { VK_FORMAT_A2R10G10B10_UINT_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32 },
+                    { VK_FORMAT_A2R10G10B10_UINT_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32 },
+                    { VK_FORMAT_A2R10G10B10_UINT_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32 },
+                    { VK_FORMAT_A2R10G10B10_UINT_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32 },
+                },
+                { // Half
+                    { VK_FORMAT_R16_SFLOAT,              VK_FORMAT_R16_SFLOAT               },
+                    { VK_FORMAT_R16G16_SFLOAT,           VK_FORMAT_R16G16_SFLOAT            },
+                    { VK_FORMAT_R16G16B16_SFLOAT,        VK_FORMAT_R16G16B16_SFLOAT         },
+                    { VK_FORMAT_R16G16B16A16_SFLOAT,     VK_FORMAT_R16G16B16A16_SFLOAT      },
+                },
+            };
 
+            buffer_handle vulkan_backend::create_vertex_buffer(const core::memory* memory, const vertex_layout& layout) noexcept
+            {
+                static u16 buffer_handle_index = 0;
 
+                buffer_handle handle { buffer_handle_index };
+                auto buffer_opt = vertex_buffer::builder(_device)
+                    .set_size(memory->size)
+                    .set_allocation_callbacks(nullptr)
+                    .build();
+                
+                if (!buffer_opt.has_value())
+                {
+                    return { BLADE_NULL_HANDLE };
+                }
+
+                auto buffer = buffer_opt.value();
+
+                buffer->allocate();
+                buffer->map_memory(memory->data);
+                
+                buffer->set_input_binding_description(VkVertexInputBindingDescription {
+                    .binding = _num_bindings,
+                    .stride = layout.stride(),
+                    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+                });
+
+                for (usize i = 0; i < layout.attributes().size(); i++)
+                {
+                    const attribute& attr = layout.attributes()[i];
+                    VkVertexInputAttributeDescription desc {
+                        .location = static_cast<u32>(attr.semantic),
+                        .binding = _num_bindings,
+                        .format = vertex_formats[static_cast<u32>(attr.type)][0][0],
+                        .offset = attr.offset
+                    };
+                    
+                    logger::debug("Attribute \"{}\" offset: {}", attr.name, attr.offset);
+                    buffer->add_input_attribute_description(desc);
+                }
+
+                _vertex_input_infos.insert(std::make_pair(handle, buffer));
+                
+                buffer_handle_index++;
+                return handle;
+            }
         } // vk namespace
     } // gfx namespace
 } // blade namespace

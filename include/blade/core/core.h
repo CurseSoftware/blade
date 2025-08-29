@@ -5,5 +5,6 @@
 #include "types.h"
 #include "logger.h"
 #include "event.h"
+#include "memory.h"
 
 #endif // BLADE_CORE_CORE_H

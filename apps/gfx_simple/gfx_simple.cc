@@ -35,12 +35,6 @@ int main(void)
     init.enable_debug = true;
     init.headless = false;
 
-    gfx::vertex_layout vlayout {};
-    vlayout.begin().value().get()
-        .add("position", 3, gfx::attribute::datatype::f32)
-        .end();
-    vlayout.print();
-
     auto gfx = gfx::renderer::create(init);
     if (!gfx)
     {

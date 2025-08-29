@@ -1,8 +1,10 @@
+#include "core/core.h"
 #include "gfx/handle.h"
 #include "gfx/renderer.h"
 #include "gfx/vertex.h"
 #include "gfx/view.h"
 #include "gfx/program.h"
+#include "gfx/vulkan/buffer.h"
 #include "gfx/vulkan/command.h"
 #include "gfx/vulkan/view.h"
 #include "gfx/vulkan/renderpass.h"
@@ -24,17 +26,18 @@ namespace blade
                 public:
                     [[nodiscard]] vulkan_backend() noexcept;
                     ~vulkan_backend() noexcept;
-                    
 
                     bool init(const init_info&) noexcept override;
                     bool shutdown() noexcept override;
                     void submit() noexcept override;
                     void frame() noexcept override;
                     void set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) noexcept override;
+                    void attach_vertex_buffer(const buffer_handle) noexcept override;
+
                     framebuffer_handle create_framebuffer(framebuffer_create_info) noexcept override;
                     shader_handle create_shader(const std::vector<u8>&) noexcept override;
                     program_handle create_view_program(const framebuffer_handle, const shader_handle, const shader_handle) noexcept override;
-                    buffer_handle create_vertex_buffer(const vertex_layout& layout) noexcept override;
+                    buffer_handle create_vertex_buffer(const core::memory* memory, const vertex_layout& layout) noexcept override;
 
                 private:
                     /// @brief Append platform-specific vulkan extensions to the list
@@ -52,6 +55,9 @@ namespace blade
                     std::unordered_map<framebuffer_handle, view> _views        {};
                     std::unordered_map<shader_handle, shader> _shaders         {};
                     std::unordered_map<program_handle, program> _programs      {};
+
+                    std::unordered_map<buffer_handle, std::shared_ptr<vertex_buffer>> _vertex_input_infos  {};
+                    u32 _num_bindings { 0 };
             };
         } // vk namespace
     } // gfx namespace

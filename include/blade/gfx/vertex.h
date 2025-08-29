@@ -8,26 +8,52 @@
 
 #include <functional>
 #include <optional>
+#include <vector>
 
 namespace blade
 {
     namespace gfx
     {
+        // TODO: add shader reflection for this
+        enum class vertex_semantic : u32
+        {
+            position = 0,
+            normal = 1,
+            color = 2,
+            texcoord0 = 3,
+            texcoord1 = 4,
+            texcoord2 = 5,
+            texcoord3 = 6,
+        };
+
         struct attribute
         {
             const char* name { nullptr };
             u32 count { 0 };
 
-            enum class datatype
+            enum class datatype : u32
             {
-                f32,
-                uint_8,
-                uint_16,
-                uint_32,
-                int_8,
-                int_16,
-                int_32
+                uint_8 = 0,
+                int_16 = 1,
+                f32 = 2
             } type;
+
+            vertex_semantic semantic { vertex_semantic::position };
+
+            u32 offset { 0 };
+
+            static usize datatype_to_size(datatype dt)
+            {
+                switch (dt)
+                {
+                    case datatype::f32:
+                        return sizeof(float);
+                    case datatype::uint_8:
+                        return sizeof(u8);
+                    case datatype::int_16:
+                        return sizeof(i16);
+                }
+            }
 
             void print() { logger::debug("Attribute \"{}\" count: {}", name, count); }
         };
@@ -44,7 +70,7 @@ namespace blade
                 {}
 
                 vertex_layout& end() const noexcept;
-                [[nodiscard]] recording& add(const char*, u32 count, attribute::datatype type) noexcept;
+                [[nodiscard]] recording& add(const char*, u32 count, attribute::datatype type, const vertex_semantic semantic) noexcept;
 
             private:
                 vertex_layout& _layout;
@@ -67,10 +93,25 @@ namespace blade
                 _attributes[0].print();
             }
 
-        private:
-            void add_attribute_(const attribute attrib) noexcept
+            const std::vector<attribute>& attributes() const noexcept
             {
-                _attributes[_attribute_index] = attrib;
+                return _attributes;
+            }
+
+            u32 stride() const noexcept
+            {
+                return _stride;
+            }
+
+        private:
+            void add_attribute_(attribute attrib) noexcept
+            {
+                _stride += attribute::datatype_to_size(attrib.type) * attrib.count;
+
+                attrib.offset = _stride;
+                
+                _attributes.push_back(attrib);
+
             }
 
         private:
@@ -81,9 +122,10 @@ namespace blade
                 finalized
             } _state { state::uninitialized };
 
-            attribute _attributes[MAX_ATTRIBUTE_COUNT] {};
+            std::vector<attribute> _attributes {};
 
             usize _attribute_index { 0 };
+            u32 _stride { 0 };
 
             recording _recording { *this };
         };

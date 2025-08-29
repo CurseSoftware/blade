@@ -3,6 +3,7 @@
 
 #include "gfx/program.h"
 #include "gfx/view.h"
+#include "gfx/vulkan/buffer.h"
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/device.h"
 #include "gfx/vulkan/renderpass.h"
@@ -40,6 +41,8 @@ namespace blade
                     bool create_program(const struct program& program, const shader& vertex, const shader& fragment) noexcept;
 
                     std::weak_ptr<class pipeline> get_graphics_pipeline() const noexcept { return graphics_pipeline; }
+
+                    void attach_vertex_buffer(std::weak_ptr<vertex_buffer> buffer) noexcept;
 
                 private:
                     bool create_swapchain_(struct width width, struct height height) noexcept;

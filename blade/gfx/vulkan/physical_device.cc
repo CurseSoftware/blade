@@ -158,6 +158,25 @@ namespace blade
                         _info.queue_family_indices.compute = i;
                 }
             }
+
+            VkPhysicalDeviceMemoryProperties physical_device::get_memory_properties() const noexcept
+            {
+                return _info.memory_properties;
+            }
+
+            std::optional<u32> physical_device::find_memory_type(u32 type_filter, VkMemoryPropertyFlags properties) const noexcept
+            {
+                for (u32 i = 0; i < _info.memory_properties.memoryTypeCount; i++)
+                {
+                    if (type_filter & (1 << i) 
+                            && (_info.memory_properties.memoryTypes[i].propertyFlags & properties) == properties
+                    ) {
+                        return i;
+                    }
+                }
+
+                return std::nullopt;
+            }
         } // vk namespace
     } // gfx namespace
 } // blade namespace

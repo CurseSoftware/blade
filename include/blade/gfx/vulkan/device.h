@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <utility>
+#include <vulkan/vulkan_core.h>
 
 namespace blade
 {
@@ -88,12 +89,23 @@ namespace blade
                  * @brief Get the features of this physical device
                  */
                 const VkPhysicalDeviceFeatures* get_features_ptr() const { return &_info.features; }
+
+                /**
+                 * @brief Query the `VkMemoryDeviceProperties` to find if a memory type is supported
+                 */
+                std::optional<u32> find_memory_type(u32 type_filter, VkMemoryPropertyFlags properties) const noexcept;
                
                 /**
                  * @brief Check if an extension is supported by the physical device
                  * @return `true` if supported and `false` otherwise
                  */
                 bool extension_is_supported(const char* extension) const noexcept;
+
+                /**
+                 * @brief Get the physical device memory properties
+                 * @return `VkPhysicalDeviceMemoryProperties` memory properties
+                 */
+                VkPhysicalDeviceMemoryProperties get_memory_properties() const noexcept;
 
                 /**
                  * @brief get the handle to the `VkPhysicalDevice`

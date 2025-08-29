@@ -86,14 +86,22 @@ namespace blade
             return program_handle { BLADE_NULL_HANDLE };
         }
 
-        buffer_handle renderer::create_vertex_buffer(const vertex_layout& layout) noexcept
+        buffer_handle renderer::create_vertex_buffer(const core::memory* memory, const vertex_layout& layout) noexcept
         {
             if (_backend)
             {
-                return _backend->create_vertex_buffer(layout);
+                return _backend->create_vertex_buffer(memory, layout);
             }
 
             return buffer_handle { BLADE_NULL_HANDLE };
+        }
+
+        void renderer::attach_vertex_buffer(const buffer_handle handle) const noexcept
+        {
+            if (_backend)
+            {
+                _backend->attach_vertex_buffer(handle);
+            }
         }
 
         void renderer::set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) const noexcept

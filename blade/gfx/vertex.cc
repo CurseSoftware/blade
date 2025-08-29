@@ -11,12 +11,13 @@ namespace blade
             return _layout;
         }
 
-        vertex_layout::recording& vertex_layout::recording::add(const char* name, u32 count, attribute::datatype type) noexcept
+        vertex_layout::recording& vertex_layout::recording::add(const char* name, u32 count, attribute::datatype type, const vertex_semantic semantic) noexcept
         {
             _layout.add_attribute_({
                 name,
                 count,
-                type
+                type,
+                semantic
             });
 
             return *this;
