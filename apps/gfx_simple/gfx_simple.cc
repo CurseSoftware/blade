@@ -1,3 +1,4 @@
+#include "core/memory.h"
 #include "core/types.h"
 #include "gfx/handle.h"
 #include "gfx/vertex.h"
@@ -63,6 +64,26 @@ int main(void)
         return 1;
     }
 
+    blade::gfx::vertex_layout v_layout = 
+        blade::gfx::vertex_layout().begin().value()
+        .get()
+        .add("position", 2, gfx::attribute::datatype::f32, gfx::vertex_semantic::position)
+        .end();
+
+    blade::f32 positions[][2] = {
+        {  0.0f, -0.5f },
+        {  0.5f,  0.5f },
+        { -0.5f,  0.5f },
+    };
+
+    blade::core::memory positions_mem = {
+        .data = positions,
+        .size = sizeof(positions)
+    };
+
+    auto buffer_handle = gfx->create_vertex_buffer(&positions_mem, v_layout);
+    gfx->attach_vertex_buffer(buffer_handle);
+
     auto vert_file = std::move(vert_opt.value());
     auto frag_file = std::move(frag_opt.value());
 
@@ -87,6 +108,8 @@ int main(void)
     while (!window->should_close())
     {
         gfx->set_viewport(frame, 0, 0, blade::width{ window->get_width() }, blade::height{ window->get_height() });
+
+        gfx->set_vertex_buffer(buffer_handle);
 
         gfx->present();
     }

@@ -175,6 +175,8 @@ namespace blade
             pipeline::builder& pipeline::builder::add_vertex_input_binding_description(const VkVertexInputBindingDescription binding_descriptions) noexcept
             {
                 info.vertex_binding_descriptions.push_back(binding_descriptions);
+                info.vertex_info.vertexBindingDescriptionCount = static_cast<u32>(info.vertex_binding_descriptions.size());
+                info.vertex_info.pVertexBindingDescriptions = info.vertex_binding_descriptions.data();
 
                 return *this;
             }
@@ -182,6 +184,8 @@ namespace blade
             pipeline::builder& pipeline::builder::add_vertex_input_attribute_description(const VkVertexInputAttributeDescription attribute_descriptions) noexcept
             {
                 info.vertex_attribute_descriptions.push_back(attribute_descriptions);
+                info.vertex_info.vertexAttributeDescriptionCount = static_cast<u32>(info.vertex_attribute_descriptions.size());
+                info.vertex_info.pVertexAttributeDescriptions = info.vertex_attribute_descriptions.data();
 
                 return *this;
             }

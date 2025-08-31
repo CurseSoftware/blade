@@ -129,13 +129,20 @@ namespace blade
                 return true;
             }
 
-            void view::attach_vertex_buffer(std::weak_ptr<vertex_buffer> buffer) noexcept
+            void view::attach_vertex_buffer(std::weak_ptr<class vertex_buffer> buffer) noexcept
             {
+                logger::info("Attaching vertex buffer");
                 pipeline_builder->add_vertex_input_binding_description(buffer.lock()->binding_description());
                 for (auto attr_desc : buffer.lock()->attribute_descriptions())
                 {
+                    logger::debug("Attaching attribute: location: [{}]. binding: [{}]. offset: [{}]", attr_desc.location, attr_desc.binding, attr_desc.offset);
                     pipeline_builder->add_vertex_input_attribute_description(attr_desc);
                 }
+            }
+
+            void view::set_vertex_buffer(std::weak_ptr<class vertex_buffer> vertex_buffer) noexcept
+            {
+                this->buffer = vertex_buffer;
             }
 
             bool view::create_swapchain_(struct width width, struct height height) noexcept

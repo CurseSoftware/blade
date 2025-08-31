@@ -37,6 +37,9 @@ namespace blade
 
                     VkVertexInputBindingDescription binding_description() const noexcept { return _binding_description; }
                     const std::vector<VkVertexInputAttributeDescription>& attribute_descriptions() const noexcept { return _attribute_descriptions; }
+
+                    [[nodiscard]] const VkBuffer& handle() const noexcept { return _buffer; }
+                    [[nodiscard]] VkBuffer* handle_ptr() noexcept { return &_buffer; }
                     
                     void set_input_binding_description(VkVertexInputBindingDescription desc) noexcept;
                     void add_input_attribute_description(VkVertexInputAttributeDescription desc) noexcept;

@@ -138,6 +138,15 @@ namespace blade
                 vkCmdSetViewport(_recording._buffer.handle(), first_viewport, viewport_count, &viewport);
             }
 
+            void command_buffer::recording::record_renderpass::bind_vertex_buffers(VkBuffer* buffers) const noexcept
+            {
+                // logger::info("Binding vertex buffer...");
+                u32 first_binding { 0 };
+                u32 binding_count { 1 };
+                VkDeviceSize offsets[] = { 0 };
+                vkCmdBindVertexBuffers(_recording._buffer.handle(), first_binding, binding_count, buffers, offsets);
+            }
+
             void command_buffer::recording::record_renderpass::set_scissor(VkRect2D scissor) const noexcept
             {
                 const u32 scissor_count = 1;

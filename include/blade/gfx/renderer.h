@@ -65,10 +65,9 @@ namespace blade
                 virtual buffer_handle create_vertex_buffer(const core::memory* memory, const vertex_layout& layout) noexcept = 0;
                 virtual void set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) noexcept = 0;
                 virtual void attach_vertex_buffer(const buffer_handle handle) noexcept = 0;
+                virtual void set_vertex_buffer(const buffer_handle handle) noexcept = 0;
 
                 virtual void submit() = 0;
-
-                // TODO: other renderer backend methods
             
             private:
         };
@@ -90,6 +89,8 @@ namespace blade
                 [[nodiscard]] buffer_handle create_vertex_buffer(const core::memory* memory, const vertex_layout& layout) noexcept;
 
                 void attach_vertex_buffer(const buffer_handle handle) const noexcept;
+
+                void set_vertex_buffer(const buffer_handle handle) const noexcept;
 
                 void set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) const noexcept;
 

@@ -46,6 +46,8 @@ namespace blade
                 }
             }
 
+            const char* vk_vertex_format_str(VkFormat format) noexcept;
+
             bool check_extension_supported(const char* ext) noexcept;
 
             /// @brief Get a string from a `VkResult`

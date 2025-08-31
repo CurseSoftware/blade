@@ -4,6 +4,7 @@
 #include "gfx/program.h"
 #include "gfx/vertex.h"
 #include "gfx/view.h"
+#include "gfx/view.h"
 #include "gfx/vulkan/buffer.h"
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/platform.h"
@@ -159,6 +160,11 @@ namespace blade
                 logger::info("Vulkan backend shutting down");
                 vkDeviceWaitIdle(_device->handle());
 
+                for (auto&& buffer : _vertex_input_infos)
+                {
+                    buffer.second->destroy();
+                }
+
                 for (auto&& shader : _shaders)
                 {
                     logger::info("Destroying shader...");
@@ -294,6 +300,7 @@ namespace blade
                 pass.bind_pipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->handle());
                 pass.set_viewport(viewport);
                 pass.set_scissor(render_area);
+                pass.bind_vertex_buffers(buffer.lock()->handle_ptr());
                 pass.draw(vertex_count, instance_count, first_vertex, first_instance);
                 pass.end();
 
@@ -357,7 +364,20 @@ namespace blade
                 }
 
                 // TODO: allow specifying of views
-                // _views[{ 0 }].attach_vertex_buffer(_vertex_input_infos[handle]);
+                auto first_view = _views.begin();
+                if (first_view != _views.end())
+                {
+                    first_view->second.attach_vertex_buffer(_vertex_input_infos[handle]);
+                }
+            }
+
+            void vulkan_backend::set_vertex_buffer(const buffer_handle handle) noexcept
+            {
+                auto first_view = _views.begin();
+                if (first_view != _views.end())
+                {
+                    first_view->second.set_vertex_buffer(_vertex_input_infos[handle]);
+                }
             }
             
             static const VkFormat vertex_formats[][4][2] =
@@ -403,7 +423,7 @@ namespace blade
                     .set_size(memory->size)
                     .set_allocation_callbacks(nullptr)
                     .build();
-                
+
                 if (!buffer_opt.has_value())
                 {
                     return { BLADE_NULL_HANDLE };
@@ -412,12 +432,13 @@ namespace blade
                 auto buffer = buffer_opt.value();
 
                 buffer->allocate();
+                logger::info("STRIDE: {}", layout.stride());
                 buffer->map_memory(memory->data);
                 
                 buffer->set_input_binding_description(VkVertexInputBindingDescription {
                     .binding = _num_bindings,
                     .stride = layout.stride(),
-                    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+                    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
                 });
 
                 for (usize i = 0; i < layout.attributes().size(); i++)
@@ -426,15 +447,22 @@ namespace blade
                     VkVertexInputAttributeDescription desc {
                         .location = static_cast<u32>(attr.semantic),
                         .binding = _num_bindings,
-                        .format = vertex_formats[static_cast<u32>(attr.type)][0][0],
+                        .format = vertex_formats[static_cast<u32>(attr.type)][attr.count-1][0],
                         .offset = attr.offset
                     };
                     
-                    logger::debug("Attribute \"{}\" offset: {}", attr.name, attr.offset);
+                    logger::debug("Attribute \"{}\" offset: {}, location: {}, format: {}"
+                            , attr.name
+                            , attr.offset
+                            , static_cast<u32>(attr.semantic)
+                            , vk_vertex_format_str(vertex_formats[static_cast<u32>(attr.type)][attr.count-1][0])
+                    );
                     buffer->add_input_attribute_description(desc);
                 }
 
                 _vertex_input_infos.insert(std::make_pair(handle, buffer));
+
+                _num_bindings++;
                 
                 buffer_handle_index++;
                 return handle;

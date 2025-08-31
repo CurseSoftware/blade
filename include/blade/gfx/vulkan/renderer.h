@@ -33,6 +33,7 @@ namespace blade
                     void frame() noexcept override;
                     void set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) noexcept override;
                     void attach_vertex_buffer(const buffer_handle) noexcept override;
+                    void set_vertex_buffer(const buffer_handle handle) noexcept override;
 
                     framebuffer_handle create_framebuffer(framebuffer_create_info) noexcept override;
                     shader_handle create_shader(const std::vector<u8>&) noexcept override;

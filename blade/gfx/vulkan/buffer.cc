@@ -1,4 +1,5 @@
 #include "gfx/vulkan/buffer.h"
+#include "core/logger.h"
 #include "core/memory.h"
 #include <cstring>
 #include <exception>
@@ -107,6 +108,7 @@ namespace blade
 
                 u32 offset { 0 };
                 vkBindBufferMemory(_device.lock()->handle(), _buffer, _memory, offset);
+                logger::info("Vertex buffer allocated and bound.");
             }
 
             void vertex_buffer::map_memory(void* memory) noexcept
@@ -116,6 +118,7 @@ namespace blade
                 VkMemoryMapFlags flags { 0 };
                 vkMapMemory(_device.lock()->handle(), _memory, offset, _size, flags, &data);
                 memcpy(data, memory, _size);
+                logger::debug("Mapped {} bytes to vertex buffer", _size);
             }
         }
     } // gfx namespace

@@ -106,9 +106,9 @@ namespace blade
         private:
             void add_attribute_(attribute attrib) noexcept
             {
-                _stride += attribute::datatype_to_size(attrib.type) * attrib.count;
-
                 attrib.offset = _stride;
+                
+                _stride += attribute::datatype_to_size(attrib.type) * attrib.count;
                 
                 _attributes.push_back(attrib);
 

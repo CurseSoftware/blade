@@ -103,6 +103,14 @@ namespace blade
                 _backend->attach_vertex_buffer(handle);
             }
         }
+        
+        void renderer::set_vertex_buffer(const buffer_handle handle) const noexcept
+        {
+            if (_backend)
+            {
+                _backend->set_vertex_buffer(handle);
+            }
+        }
 
         void renderer::set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) const noexcept
         {

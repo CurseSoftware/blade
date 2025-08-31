@@ -62,6 +62,7 @@ namespace blade
                                     record_renderpass& operator=(record_renderpass&&) = delete;
                                     record_renderpass(record_renderpass&& other) noexcept;
 
+                                    void bind_vertex_buffers(VkBuffer* buffers) const noexcept;
                                     void bind_pipeline(VkPipelineBindPoint bind_point, VkPipeline pipeline) const noexcept;
                                     void set_viewport(VkViewport viewport) const noexcept;
                                     void set_scissor(VkRect2D scissor) const noexcept;
