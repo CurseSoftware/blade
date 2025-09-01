@@ -1,6 +1,7 @@
 #ifndef BLADFE_GFX_VULKAN_BUFFER_H
 #define BLADFE_GFX_VULKAN_BUFFER_H
 #include "core/memory.h"
+#include "gfx/vulkan/command.h"
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/device.h"
 #include <vector>
@@ -14,26 +15,30 @@ namespace blade
     {
         namespace vk
         {
-            class vertex_buffer
+            class buffer
             {
                 public:
                     struct builder
                     {
                         [[nodiscard]] explicit builder(std::weak_ptr<class device> device) noexcept;
-                        std::optional<std::shared_ptr<vertex_buffer>> build() const noexcept;
+                        std::optional<std::shared_ptr<buffer>> build() const noexcept;
 
-                        builder& set_size(u32 size) noexcept;
+                        builder& set_usage(const VkBufferUsageFlags usage) noexcept;
+                        builder& set_size(const u32 size) noexcept;
                         builder& set_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept;
+                        builder& set_sharing_mode(const VkSharingMode sharing_mode) noexcept;
 
                         struct
                         {
                             std::weak_ptr<class device> device;
+                            VkBufferUsageFlags usage                    { VK_BUFFER_USAGE_VERTEX_BUFFER_BIT };
                             u32 size                                    { 0 };
                             VkAllocationCallbacks* allocation_callbacks { nullptr };
+                            VkSharingMode sharing_mode                  { VK_SHARING_MODE_EXCLUSIVE };
                         } info;
                     };
 
-                    [[nodiscard]] explicit vertex_buffer(VkBuffer buffer, u32 size, std::weak_ptr<class device> device, VkAllocationCallbacks* callbacks) noexcept;
+                    [[nodiscard]] explicit buffer(VkBuffer buffer, u32 size, std::weak_ptr<class device> device, VkAllocationCallbacks* callbacks) noexcept;
 
                     VkVertexInputBindingDescription binding_description() const noexcept { return _binding_description; }
                     const std::vector<VkVertexInputAttributeDescription>& attribute_descriptions() const noexcept { return _attribute_descriptions; }
@@ -44,11 +49,13 @@ namespace blade
                     void set_input_binding_description(VkVertexInputBindingDescription desc) noexcept;
                     void add_input_attribute_description(VkVertexInputAttributeDescription desc) noexcept;
 
-                    void allocate() noexcept;
+                    void allocate(VkMemoryPropertyFlags flags) noexcept;
 
                     void destroy() noexcept;
 
                     void map_memory(void* memory) noexcept;
+
+                    [[nodiscard]] u32 size() const noexcept { return _size; }
 
                 private:
                     

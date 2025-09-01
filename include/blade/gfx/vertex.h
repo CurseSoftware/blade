@@ -6,6 +6,7 @@
 #include "math/vec2.h"
 #include "math/vec3.h"
 
+#include <exception>
 #include <functional>
 #include <optional>
 #include <vector>
@@ -18,8 +19,8 @@ namespace blade
         enum class vertex_semantic : u32
         {
             position = 0,
-            normal = 1,
-            color = 2,
+            color = 1,
+            normal = 2,
             texcoord0 = 3,
             texcoord1 = 4,
             texcoord2 = 5,
@@ -86,6 +87,16 @@ namespace blade
                 _state = state::recording;
                 
                 return _recording;
+            }
+
+            /**
+             * @brief Generate a vertex layout from a given struct
+             * @tparam T the structure to generate a vertex layout from
+             */
+            template <typename T>
+            [[nodiscard]] static vertex_layout from() noexcept
+            {
+                std::terminate();
             }
 
             void print()

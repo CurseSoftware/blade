@@ -176,6 +176,36 @@ namespace blade
             ////////////////////////////////////////////////
             ///              END RENDERPASS              ///
             ////////////////////////////////////////////////
+            
+            ////////////////////////////////////////////////
+            ///              BEGIN TRANSFER              ///
+            ////////////////////////////////////////////////
+            command_buffer::recording::record_transfer::record_transfer(recording& rec) noexcept
+                : _recording{ rec }
+            {}
+
+            command_buffer::recording::record_transfer command_buffer::recording::begin_transfer() noexcept
+            {
+                return record_transfer(*this);
+            }
+
+            void command_buffer::recording::record_transfer::copy_buffers(VkBuffer src, VkBuffer dst, const VkDeviceSize size) const noexcept
+            {
+                constexpr u32 region_count { 1 };
+                VkBufferCopy copy_region {
+                    .srcOffset = 0,
+                    .dstOffset = 0,
+                    .size = size
+                };
+
+                vkCmdCopyBuffer(_recording._buffer.handle(), src, dst, region_count, &copy_region);
+            }
+
+            bool command_buffer::recording::record_transfer::end() noexcept
+            {
+                return false;
+            }
+
         } // vk namespace
     } // gfx namespace
 } // blade namespace

@@ -1,3 +1,4 @@
+#include "core/logger.h"
 #include "core/memory.h"
 #include "core/types.h"
 #include "gfx/handle.h"
@@ -6,11 +7,18 @@
 #include "math/vec2.h"
 #include <array>
 #include <blade/blade.h>
+#include <cstddef>
 
 namespace logger = blade::logger;
 namespace gfx = blade::gfx;
 namespace fs = blade::resources::fs;
 namespace math = blade::math;
+
+struct vertex
+{
+    float positions[3] = { 0.f, 0.f, 0.f };
+    float color[3] = { 0.f, 0.f, 0.f };
+};
 
 int main(void)
 {
@@ -64,21 +72,23 @@ int main(void)
         return 1;
     }
 
+    constexpr blade::usize SIZEOF_POSITION = 3;
     blade::gfx::vertex_layout v_layout = 
         blade::gfx::vertex_layout().begin().value()
         .get()
-        .add("position", 2, gfx::attribute::datatype::f32, gfx::vertex_semantic::position)
+        .add("position", SIZEOF_POSITION, gfx::attribute::datatype::f32, gfx::vertex_semantic::position)
+        .add("color", SIZEOF_POSITION, gfx::attribute::datatype::f32, gfx::vertex_semantic::color)
         .end();
 
-    blade::f32 positions[][2] = {
-        {  0.0f, -0.5f },
-        {  0.5f,  0.5f },
-        { -0.5f,  0.5f },
+    std::vector<vertex> vertices = {
+        {  {  0.0f, -0.5f,  0.0f}, { 1.0f, 0.0f, 0.0f } }, // TOP FRONT RIGHT
+        {  {  0.5f,  0.5f,  0.0f}, { 0.0f, 1.0f, 0.0f } }, // TOP FRONT LEFT 
+        {  { -0.5f,  0.5f,  0.0f}, { 0.0f, 0.0f, 1.0f } }, // TOP BACK LEFT
     };
 
     blade::core::memory positions_mem = {
-        .data = positions,
-        .size = sizeof(positions)
+        .data = vertices.data(),
+        .size = vertices.size() * sizeof(vertex)
     };
 
     auto buffer_handle = gfx->create_vertex_buffer(&positions_mem, v_layout);

@@ -1,6 +1,7 @@
 #include "gfx/vulkan/buffer.h"
 #include "core/logger.h"
 #include "core/memory.h"
+#include "gfx/vulkan/command.h"
 #include <cstring>
 #include <exception>
 #include <optional>
@@ -12,33 +13,39 @@ namespace blade
     {
         namespace vk
         {
-            vertex_buffer::builder::builder(std::weak_ptr<class device> device) noexcept
+            buffer::builder::builder(std::weak_ptr<class device> device) noexcept
                 : info { device }
             {}
 
-            vertex_buffer::builder& vertex_buffer::builder::set_size(u32 size) noexcept
+            buffer::builder& buffer::builder::set_usage(const VkBufferUsageFlags usage) noexcept
+            {
+                info.usage = usage;
+
+                return *this;
+            }
+
+            buffer::builder& buffer::builder::set_size(u32 size) noexcept
             {
                 info.size = size;
 
                 return *this;
             }
             
-            vertex_buffer::builder& vertex_buffer::builder::set_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept
+            buffer::builder& buffer::builder::set_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept
             {
                 info.allocation_callbacks = callbacks;
 
                 return *this;
             }
 
-
-            std::optional<std::shared_ptr<vertex_buffer>> vertex_buffer::builder::build() const noexcept
+            std::optional<std::shared_ptr<buffer>> buffer::builder::build() const noexcept
             {
                 VkBuffer buffer {};
                 VkBufferCreateInfo create_info {
                     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
                     .size = info.size,
-                    .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                    .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+                    .usage = info.usage,
+                    .sharingMode = info.sharing_mode 
                 };
 
                 const VkResult result = vkCreateBuffer(
@@ -54,36 +61,33 @@ namespace blade
                     return std::nullopt;
                 }
 
-                return std::make_shared<vertex_buffer>(buffer, info.size, info.device, info.allocation_callbacks);
+                return std::make_shared<class buffer>(buffer, info.size, info.device, info.allocation_callbacks);
             }
 
-            void vertex_buffer::set_input_binding_description(VkVertexInputBindingDescription description) noexcept
+            void buffer::set_input_binding_description(VkVertexInputBindingDescription description) noexcept
             {
                 _binding_description = description;
             }
 
-            void vertex_buffer::add_input_attribute_description(VkVertexInputAttributeDescription desc) noexcept
+            void buffer::add_input_attribute_description(VkVertexInputAttributeDescription desc) noexcept
             {
                 _attribute_descriptions.push_back(desc);
             }
 
-
-
-
-            vertex_buffer::vertex_buffer(VkBuffer buffer, u32 size, std::weak_ptr<class device> device, VkAllocationCallbacks* callbacks) noexcept
+            buffer::buffer(VkBuffer buffer, u32 size, std::weak_ptr<class device> device, VkAllocationCallbacks* callbacks) noexcept
                 : _buffer{ buffer }
                 , _size{ size }
                 , _device{ device }
                 , _allocation_callbacks{ callbacks }
             {}
 
-            void vertex_buffer::destroy() noexcept
+            void buffer::destroy() noexcept
             {
                 vkDestroyBuffer(_device.lock()->handle(), _buffer, _allocation_callbacks);
                 vkFreeMemory(_device.lock()->handle(), _memory, _allocation_callbacks);
             }
 
-            void vertex_buffer::allocate() noexcept
+            void buffer::allocate(VkMemoryPropertyFlags flags) noexcept
             {
                 VkMemoryRequirements requirements {};
                 vkGetBufferMemoryRequirements(_device.lock()->handle(), _buffer, &requirements);
@@ -94,8 +98,9 @@ namespace blade
                     .allocationSize = requirements.size,
                     .memoryTypeIndex = _device.lock()->get_physical_device().lock()->find_memory_type(
                             requirements.memoryTypeBits, 
-                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                            | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                            flags
+                            // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                            // | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
                         ).value(),
                 };
 
@@ -111,7 +116,7 @@ namespace blade
                 logger::info("Vertex buffer allocated and bound.");
             }
 
-            void vertex_buffer::map_memory(void* memory) noexcept
+            void buffer::map_memory(void* memory) noexcept
             {
                 void* data;
                 u32 offset { 0 };

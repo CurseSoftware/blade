@@ -419,23 +419,61 @@ namespace blade
                 static u16 buffer_handle_index = 0;
 
                 buffer_handle handle { buffer_handle_index };
-                auto buffer_opt = vertex_buffer::builder(_device)
+
+                auto staging_buffer_opt = buffer::builder(_device)
+                    .set_usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
                     .set_size(memory->size)
                     .set_allocation_callbacks(nullptr)
                     .build();
 
-                if (!buffer_opt.has_value())
+                if (!staging_buffer_opt.has_value())
                 {
+                    logger::error("FAILED TO CREATE STAGING BUFFER");
                     return { BLADE_NULL_HANDLE };
                 }
 
-                auto buffer = buffer_opt.value();
-
-                buffer->allocate();
-                logger::info("STRIDE: {}", layout.stride());
-                buffer->map_memory(memory->data);
+                auto staging_buffer = staging_buffer_opt.value();
+                staging_buffer->allocate(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                staging_buffer->map_memory(memory->data);
                 
-                buffer->set_input_binding_description(VkVertexInputBindingDescription {
+                auto vertex_buffer_opt = buffer::builder(_device)
+                    .set_size(memory->size)
+                    .set_usage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
+                    .set_allocation_callbacks(nullptr)
+                    .build();
+
+                if (!vertex_buffer_opt.has_value())
+                {
+                    logger::error("FAILED TO CREATE VERTEX BUFFER");
+                    return { BLADE_NULL_HANDLE };
+                }
+
+                auto vertex_buffer = vertex_buffer_opt.value();
+                vertex_buffer->allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+                logger::info("STRIDE: {}", layout.stride());
+
+                auto command_buffer = _command_pool->allocate_single().value();
+                command_buffer.begin()
+                    ->begin_transfer()
+                    .copy_buffers(staging_buffer->handle(), vertex_buffer->handle(), memory->size);
+                command_buffer.end();
+
+                // TODO: submit this command buffer with a queue
+                VkCommandBuffer bufs[] = { command_buffer.handle() };
+                VkSubmitInfo submit_info {
+                    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                    .commandBufferCount = 1,
+                    .pCommandBuffers = bufs,
+                };
+                const VkResult submit_result = vkQueueSubmit(
+                    _device->get_queue(queue_type::transfer).value()
+                    , 1
+                    , &submit_info
+                    , VK_NULL_HANDLE
+                );
+                vkQueueWaitIdle(_device->get_queue(queue_type::transfer).value());
+                
+                vertex_buffer->set_input_binding_description(VkVertexInputBindingDescription {
                     .binding = _num_bindings,
                     .stride = layout.stride(),
                     .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
@@ -457,10 +495,13 @@ namespace blade
                             , static_cast<u32>(attr.semantic)
                             , vk_vertex_format_str(vertex_formats[static_cast<u32>(attr.type)][attr.count-1][0])
                     );
-                    buffer->add_input_attribute_description(desc);
+                    vertex_buffer->add_input_attribute_description(desc);
                 }
 
-                _vertex_input_infos.insert(std::make_pair(handle, buffer));
+                staging_buffer->destroy();
+                vkFreeCommandBuffers(_device->handle(), _command_pool->handle(), 1, bufs);
+
+                _vertex_input_infos.insert(std::make_pair(handle, vertex_buffer));
 
                 _num_bindings++;
                 

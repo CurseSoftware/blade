@@ -74,9 +74,21 @@ namespace blade
                                     bool _active                          { false };
                             };
 
+                            class record_transfer
+                            {
+                                public:
+                                    [[nodiscard]] record_transfer(recording& rec) noexcept;
+
+                                    void copy_buffers(VkBuffer scr, VkBuffer dst, const VkDeviceSize size) const noexcept;
+                                    bool end() noexcept;
+                                private:
+                                    recording& _recording;
+                            };
+
                             static std::optional<recording> create(command_buffer& cb, VkCommandBufferBeginInfo begin_info) noexcept;
 
-                            record_renderpass begin_renderpass(std::weak_ptr<renderpass> rp, VkFramebuffer framebuffer, const std::vector<VkClearValue>& clear_values, VkRect2D render_area) noexcept;
+                            [[nodiscard]] record_renderpass begin_renderpass(std::weak_ptr<renderpass> rp, VkFramebuffer framebuffer, const std::vector<VkClearValue>& clear_values, VkRect2D render_area) noexcept;
+                            [[nodiscard]] record_transfer begin_transfer() noexcept;
 
                         private:
                             command_buffer& _buffer;
@@ -106,9 +118,11 @@ namespace blade
                      */
                     bool allocate_buffers(const u32 num_buffers) noexcept;
 
-                    
+                    std::optional<command_buffer> allocate_single() noexcept;
 
                     void destroy() noexcept;
+
+                    [[nodiscard]] VkCommandPool handle() const noexcept { return _command_pool; }
 
                 public:
                     enum kind

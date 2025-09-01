@@ -42,9 +42,9 @@ namespace blade
 
                     std::weak_ptr<class pipeline> get_graphics_pipeline() const noexcept { return graphics_pipeline; }
 
-                    void attach_vertex_buffer(std::weak_ptr<vertex_buffer> buffer) noexcept;
+                    void attach_vertex_buffer(std::weak_ptr<buffer> buffer) noexcept;
                     
-                    void set_vertex_buffer(std::weak_ptr<vertex_buffer> buffer) noexcept;
+                    void set_vertex_buffer(std::weak_ptr<buffer> buffer) noexcept;
 
                 private:
                     bool create_swapchain_(struct width width, struct height height) noexcept;
@@ -66,7 +66,7 @@ namespace blade
                     VkSemaphore render_finished_semaphore                     {};
                     VkFence in_flight_fence                                   {};
                     u32 current_image_index                                   { 0 };
-                    std::weak_ptr<class vertex_buffer> buffer                 {};
+                    std::weak_ptr<class buffer> buffer                 {};
 
             };
 

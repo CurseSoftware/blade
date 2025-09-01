@@ -57,7 +57,7 @@ namespace blade
                     std::unordered_map<shader_handle, shader> _shaders         {};
                     std::unordered_map<program_handle, program> _programs      {};
 
-                    std::unordered_map<buffer_handle, std::shared_ptr<vertex_buffer>> _vertex_input_infos  {};
+                    std::unordered_map<buffer_handle, std::shared_ptr<buffer>> _vertex_input_infos  {};
                     u32 _num_bindings { 0 };
             };
         } // vk namespace

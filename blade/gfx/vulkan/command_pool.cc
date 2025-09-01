@@ -59,6 +59,25 @@ namespace blade
                 return *this;
             }
 
+            std::optional<command_buffer> command_pool::allocate_single() noexcept
+            {
+                VkCommandBufferAllocateInfo alloc_info {
+                    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                    .commandPool = _command_pool,
+                    .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                    .commandBufferCount = 1 // only allocate 1 
+                };
+
+                VkCommandBuffer buffer {};
+                const VkResult result = vkAllocateCommandBuffers(_device.lock()->handle(), &alloc_info, &buffer);
+                if (result != VK_SUCCESS)
+                {
+                    return std::nullopt;
+                }
+                
+                return command_buffer{ buffer };
+            }
+
             bool command_pool::allocate_buffers(const u32 num_buffers) noexcept
             {
                 if (!_buffers.empty())

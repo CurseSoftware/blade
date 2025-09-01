@@ -129,7 +129,7 @@ namespace blade
                 return true;
             }
 
-            void view::attach_vertex_buffer(std::weak_ptr<class vertex_buffer> buffer) noexcept
+            void view::attach_vertex_buffer(std::weak_ptr<class buffer> buffer) noexcept
             {
                 logger::info("Attaching vertex buffer");
                 pipeline_builder->add_vertex_input_binding_description(buffer.lock()->binding_description());
@@ -140,7 +140,7 @@ namespace blade
                 }
             }
 
-            void view::set_vertex_buffer(std::weak_ptr<class vertex_buffer> vertex_buffer) noexcept
+            void view::set_vertex_buffer(std::weak_ptr<class buffer> vertex_buffer) noexcept
             {
                 this->buffer = vertex_buffer;
             }
