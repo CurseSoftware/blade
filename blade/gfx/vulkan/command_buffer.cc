@@ -21,9 +21,10 @@ namespace blade
                 vkResetCommandBuffer(_buffer, flags);
             }
 
-            void command_buffer::end() const noexcept
+            void command_buffer::end() noexcept
             {
                 vkEndCommandBuffer(_buffer);
+                _is_active = false;
             }
 
             void command_buffer::submit(const std::vector<VkSemaphore>& semaphores) const noexcept
@@ -36,6 +37,8 @@ namespace blade
                     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
                     .flags = flags
                 };
+
+                _is_active = true;
 
                 return recording::create(*this, begin_info);
             }
@@ -205,7 +208,6 @@ namespace blade
             {
                 return false;
             }
-
         } // vk namespace
     } // gfx namespace
 } // blade namespace

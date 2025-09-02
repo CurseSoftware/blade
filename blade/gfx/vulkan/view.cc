@@ -1,5 +1,6 @@
 #include "gfx/vulkan/view.h"
 #include "gfx/program.h"
+#include "submit.h"
 #include <vulkan/vulkan_core.h>
 
 namespace blade

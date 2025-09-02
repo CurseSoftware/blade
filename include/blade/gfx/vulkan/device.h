@@ -79,6 +79,10 @@ namespace blade
                     return *this;
                 }
 
+                /**
+                 * @brief Submit a command buffer to a specific queue
+                 */
+                bool submit_to_queue(queue_type queue, u32 buffer_count, VkCommandBuffer* buffers) const noexcept;
 
                 /**
                  * @brief Get the properties of this physical device

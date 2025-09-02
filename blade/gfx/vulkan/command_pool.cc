@@ -78,6 +78,20 @@ namespace blade
                 return command_buffer{ buffer };
             }
 
+            VkCommandBuffer command_pool::acquire_command_buffer() noexcept
+            {
+                // Check if free list is empty
+                if (_free_list_head == nullptr)
+                {
+                    allocate_buffers(8);
+                }
+
+                buffer_node* node = _free_list_head;
+                _free_list_head = _free_list_head->next;
+
+                return node->command_buffer;
+            }
+
             bool command_pool::allocate_buffers(const u32 num_buffers) noexcept
             {
                 if (!_buffers.empty())
@@ -111,6 +125,24 @@ namespace blade
                 }
 
                 return true;
+            }
+
+            std::optional<VkFence> command_pool::create_fence_() const noexcept
+            {
+                VkFenceCreateInfo fence_info 
+                {
+                    .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                    .flags = VK_FENCE_CREATE_SIGNALED_BIT
+                };
+                VkFence fence {};
+
+                const VkResult result = vkCreateFence(_device.lock()->handle(), &fence_info, _allocation_callbacks, &fence);
+                if (result != VK_SUCCESS)
+                {
+                    return std::nullopt;
+                }
+
+                return fence;
             }
 
             void command_pool::destroy() noexcept
