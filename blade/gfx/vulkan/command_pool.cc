@@ -121,6 +121,12 @@ namespace blade
 
                 for (auto buffer : _buffers)
                 {
+                    VkFence fence = create_fence_().value();
+                    std::unique_ptr<buffer_node> node = std::make_unique<buffer_node>(buffer, 0, fence);
+                    node->next = _free_list_head;
+                    _free_list_head = node.get();
+                    _all_buffers.push_back(std::move(node));
+                    
                     _buffer_handlers.push_back(std::move(std::make_unique<command_buffer>(buffer)));
                 }
 

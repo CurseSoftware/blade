@@ -186,6 +186,8 @@ namespace blade
                     std::vector<VkCommandBuffer> _buffers                         {};
                     std::vector<std::unique_ptr<command_buffer>> _buffer_handlers {};
 
+                    std::vector<std::unique_ptr<buffer_node>> _all_buffers {};
+
                     buffer_node* _free_list_head { nullptr };
             };
         } // vk namespace
