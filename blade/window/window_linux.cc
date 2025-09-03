@@ -158,6 +158,14 @@ namespace blade
         return std::move(wnd);
     }
 
+    bool window::set_title(const std::string& title) noexcept
+    {
+        const int result = XStoreName(_display, _window, title.c_str());
+        // XFlush(_display);
+
+        return result != 0;
+    }
+
     void window::show()
     {
         _should_close = false;

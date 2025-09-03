@@ -118,6 +118,7 @@ namespace blade
                         u64 last_frame_used            { 0 };
                         u64 creation_frame             { 0 };
                         u64 usage_count                { 0 };
+                        bool is_submitted              { false };
                         buffer_node* next              { nullptr };
 
                         [[nodiscard]] explicit buffer_node(
@@ -131,6 +132,21 @@ namespace blade
                             , creation_frame{ frame }
                         {}
                     };
+
+                    VkResult submit_buffer(
+                        VkCommandBuffer buffer
+                        , VkQueue queue
+                        , const VkSemaphore* wait_semaphores = nullptr
+                        , u32 wait_semaphore_count = 0
+                        , const VkSemaphore* signal_semaphores = nullptr
+                        , u32 signal_semaphore_count = 0
+                        , VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+                    ) const noexcept;
+
+                    void update() noexcept;
+
+                    void wait_for_command_buffer(VkCommandBuffer buffer) const noexcept;
+                    void reset_command_buffer_fence(VkCommandBuffer) const noexcept;
 
                     command_buffer& get_buffer(u32 index) const noexcept { return *_buffer_handlers[index].get(); }
 
@@ -178,6 +194,8 @@ namespace blade
 
                 private:
                     std::optional<VkFence> create_fence_() const noexcept;
+                    void process_completed_buffers_() noexcept;
+                    void return_to_free_list_(buffer_node* node) noexcept;
 
                 private:
                     std::weak_ptr<class device> _device                           {};
@@ -187,6 +205,7 @@ namespace blade
                     std::vector<std::unique_ptr<command_buffer>> _buffer_handlers {};
 
                     std::vector<std::unique_ptr<buffer_node>> _all_buffers {};
+                    std::unordered_map<VkCommandBuffer, buffer_node*> _active_buffers {};
 
                     buffer_node* _free_list_head { nullptr };
             };

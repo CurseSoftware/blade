@@ -7,6 +7,7 @@
 #include "math/vec2.h"
 #include <array>
 #include <blade/blade.h>
+#include <chrono>
 #include <cstddef>
 
 namespace logger = blade::logger;
@@ -115,6 +116,8 @@ int main(void)
 
     window->show();
 
+    blade::u64 frame_count = 0;
+    auto start_time = std::chrono::steady_clock::now();
     while (!window->should_close())
     {
         gfx->set_viewport(frame, 0, 0, blade::width{ window->get_width() }, blade::height{ window->get_height() });
@@ -122,6 +125,20 @@ int main(void)
         gfx->set_vertex_buffer(buffer_handle);
 
         gfx->present();
+
+
+        if (frame_count % 300 == 0)
+        {
+            auto end_time = std::chrono::steady_clock::now();
+            auto frame_time = end_time - start_time;
+            double fps = 300.f / std::chrono::duration_cast<std::chrono::duration<double>>(frame_time).count();
+            logger::info("Frame Rate: {}", fps);
+            std::string title = "Frame Rate: " + std::to_string(fps);
+            window->set_title(title);
+            start_time = std::chrono::steady_clock::now();
+        }
+
+        frame_count++;
     }
 
     

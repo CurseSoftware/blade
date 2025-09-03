@@ -95,10 +95,7 @@ namespace blade
                     .set_queue_family_index(_device->get_physical_device().lock()->graphics_queue_index().value())
                     .build();
                 _command_pool = pool_res.value();
-                _command_pool->allocate_buffers(1);
-
-                // auto device_opt = device::create(_instance, { .use_swapchain = true });
-                // _device = device_opt.value();
+                _command_pool->allocate_buffers(8);
 
                 _is_initialized = true;
                 return true;
@@ -251,9 +248,7 @@ namespace blade
             {
                 for (auto&& view: _views)
                 {
-                    command_buffer& cmd = _command_pool->get_buffer(0);
-
-                    view.second.frame(cmd);
+                    view.second.frame();
                 }
             }
 
@@ -452,25 +447,17 @@ namespace blade
                 vertex_buffer->allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
                 logger::info("STRIDE: {}", layout.stride());
 
-                auto command_buffer = _command_pool->allocate_single().value();
+                class command_buffer command_buffer(_command_pool->acquire_command_buffer());
                 command_buffer.begin()
                     ->begin_transfer()
                     .copy_buffers(staging_buffer->handle(), vertex_buffer->handle(), memory->size);
                 command_buffer.end();
 
-                // TODO: submit this command buffer with a queue
-                VkCommandBuffer bufs[] = { command_buffer.handle() };
-                VkSubmitInfo submit_info {
-                    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                    .commandBufferCount = 1,
-                    .pCommandBuffers = bufs,
-                };
-                const VkResult submit_result = vkQueueSubmit(
-                    _device->get_queue(queue_type::transfer).value()
-                    , 1
-                    , &submit_info
-                    , VK_NULL_HANDLE
+                _command_pool->submit_buffer(
+                    command_buffer.handle()
+                    , _device->get_queue(queue_type::transfer).value()
                 );
+                _command_pool->update();
                 vkQueueWaitIdle(_device->get_queue(queue_type::transfer).value());
                 
                 vertex_buffer->set_input_binding_description(VkVertexInputBindingDescription {
@@ -499,7 +486,6 @@ namespace blade
                 }
 
                 staging_buffer->destroy();
-                vkFreeCommandBuffers(_device->handle(), _command_pool->handle(), 1, bufs);
 
                 _vertex_input_infos.insert(std::make_pair(handle, vertex_buffer));
 
