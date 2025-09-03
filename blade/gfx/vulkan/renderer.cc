@@ -1,4 +1,5 @@
 #include "gfx/vulkan/renderer.h"
+#include "core/memory.h"
 #include "core/types.h"
 #include "gfx/handle.h"
 #include "gfx/program.h"
@@ -156,6 +157,11 @@ namespace blade
             {
                 logger::info("Vulkan backend shutting down");
                 vkDeviceWaitIdle(_device->handle());
+                
+                for (auto&& buffer : _index_input_infos)
+                {
+                    buffer.second->destroy();
+                }
 
                 for (auto&& buffer : _vertex_input_infos)
                 {
@@ -297,6 +303,17 @@ namespace blade
                 pass.set_scissor(render_area);
                 pass.bind_vertex_buffers(buffer.lock()->handle_ptr());
                 pass.draw(vertex_count, instance_count, first_vertex, first_instance);
+
+                if (index_buffer != nullptr)
+                {
+                    u32 index_count = 6
+                        , first_index = 0
+                        , first_instance = 0;
+                    i32 vertex_offset = 0;
+                    pass.bind_index_buffers(index_buffer->handle(), index_buffer->size());
+                    pass.draw_indexed(index_count, instance_count, first_index, vertex_offset, vertex_offset);
+                }
+
                 pass.end();
 
                 command_buffer.end();
@@ -366,6 +383,18 @@ namespace blade
                 }
             }
 
+            void vulkan_backend::set_index_buffer(const buffer_handle handle) noexcept
+            {
+                auto first_view = _views.begin();
+                if (first_view != _views.end())
+                {
+                    auto index = _index_input_infos[handle];
+                    if (!index)
+                        logger::error("NO INDEX");
+                    first_view->second.set_index_buffer(_index_input_infos[handle]);
+                }
+            }
+
             void vulkan_backend::set_vertex_buffer(const buffer_handle handle) noexcept
             {
                 auto first_view = _views.begin();
@@ -409,11 +438,64 @@ namespace blade
                 },
             };
 
+            buffer_handle vulkan_backend::create_index_buffer(const core::memory* memory) noexcept
+            {
+                buffer_handle handle = { _buffer_handle_index };
+
+                auto staging_buffer_opt = buffer::builder(_device)
+                    .set_usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+                    .set_size(memory->size)
+                    .set_allocation_callbacks(nullptr)
+                    .build();
+
+                if (!staging_buffer_opt.has_value())
+                {
+                    logger::error("FAILED TO CREATE STAGING BUFFER");
+                    return { BLADE_NULL_HANDLE };
+                }
+
+                auto staging_buffer = staging_buffer_opt.value();
+                staging_buffer->allocate(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                staging_buffer->map_memory(memory->data);
+                
+                auto index_buffer_opt = buffer::builder(_device)
+                    .set_size(memory->size)
+                    .set_usage(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+                    .set_allocation_callbacks(nullptr)
+                    .build();
+
+                if (!index_buffer_opt.has_value())
+                {
+                    return { BLADE_NULL_HANDLE };
+                }
+                
+                auto index_buffer = index_buffer_opt.value();
+                index_buffer->allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+                class command_buffer command_buffer(_command_pool->acquire_command_buffer());
+                command_buffer.begin()
+                    ->begin_transfer()
+                    .copy_buffers(staging_buffer->handle(), index_buffer->handle(), memory->size);
+                command_buffer.end();
+
+                _command_pool->submit_buffer(
+                    command_buffer.handle()
+                    , _device->get_queue(queue_type::transfer).value()
+                );
+                _command_pool->update();
+                vkQueueWaitIdle(_device->get_queue(queue_type::transfer).value());
+                staging_buffer->destroy();
+
+                _index_input_infos[handle] = index_buffer;
+
+                _buffer_handle_index++;
+                logger::info("INDEX HANDLE: {}", handle.index);
+                return handle;
+            }
+
             buffer_handle vulkan_backend::create_vertex_buffer(const core::memory* memory, const vertex_layout& layout) noexcept
             {
-                static u16 buffer_handle_index = 0;
-
-                buffer_handle handle { buffer_handle_index };
+                buffer_handle handle { _buffer_handle_index };
 
                 auto staging_buffer_opt = buffer::builder(_device)
                     .set_usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
@@ -491,7 +573,7 @@ namespace blade
 
                 _num_bindings++;
                 
-                buffer_handle_index++;
+                _buffer_handle_index++;
                 return handle;
             }
         } // vk namespace

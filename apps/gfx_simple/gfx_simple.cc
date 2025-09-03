@@ -82,9 +82,15 @@ int main(void)
         .end();
 
     std::vector<vertex> vertices = {
-        {  {  0.0f, -0.5f,  0.0f}, { 1.0f, 0.0f, 0.0f } }, // TOP FRONT RIGHT
+        {  { -0.5f, -0.5f,  0.0f}, { 1.0f, 0.0f, 0.0f } }, // TOP FRONT RIGHT
+        {  {  0.5f, -0.5f,  0.0f}, { 0.0f, 1.0f, 0.0f } }, // TOP FRONT LEFT 
         {  {  0.5f,  0.5f,  0.0f}, { 0.0f, 1.0f, 0.0f } }, // TOP FRONT LEFT 
         {  { -0.5f,  0.5f,  0.0f}, { 0.0f, 0.0f, 1.0f } }, // TOP BACK LEFT
+    };
+
+    std::vector<blade::u16> indices = {
+        0, 1, 2,
+        2, 3, 0
     };
 
     blade::core::memory positions_mem = {
@@ -92,8 +98,17 @@ int main(void)
         .size = vertices.size() * sizeof(vertex)
     };
 
+    blade::core::memory index_mem = {
+        .data = indices.data(),
+        .size = indices.size() * sizeof(blade::u16)
+    };
+
+    logger::info("INDEX MEM: {}", index_mem.size);
+
     auto buffer_handle = gfx->create_vertex_buffer(&positions_mem, v_layout);
     gfx->attach_vertex_buffer(buffer_handle);
+
+    auto index_handle = gfx->create_index_buffer(&index_mem);
 
     auto vert_file = std::move(vert_opt.value());
     auto frag_file = std::move(frag_opt.value());
@@ -123,6 +138,8 @@ int main(void)
         gfx->set_viewport(frame, 0, 0, blade::width{ window->get_width() }, blade::height{ window->get_height() });
 
         gfx->set_vertex_buffer(buffer_handle);
+
+        gfx->set_index_buffer(index_handle);
 
         gfx->present();
 

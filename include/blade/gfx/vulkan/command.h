@@ -64,10 +64,12 @@ namespace blade
                                     record_renderpass(record_renderpass&& other) noexcept;
 
                                     void bind_vertex_buffers(VkBuffer* buffers) const noexcept;
+                                    void bind_index_buffers(VkBuffer buffers, VkDeviceSize size) const noexcept;
                                     void bind_pipeline(VkPipelineBindPoint bind_point, VkPipeline pipeline) const noexcept;
                                     void set_viewport(VkViewport viewport) const noexcept;
                                     void set_scissor(VkRect2D scissor) const noexcept;
                                     void draw(u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance) const noexcept;
+                                    void draw_indexed(u32 index_count, u32 instance_count, u32 first_index, i32 vertex_offset, u32 first_instance) const noexcept;
                                     bool end() noexcept;
                                 private:
                                     recording& _recording;

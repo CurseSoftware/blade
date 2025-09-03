@@ -63,9 +63,11 @@ namespace blade
                 virtual shader_handle create_shader(const std::vector<u8>& mem) noexcept = 0;
                 virtual program_handle create_view_program(const framebuffer_handle framebuffer, const shader_handle vertex, const shader_handle fragment) noexcept = 0;
                 virtual buffer_handle create_vertex_buffer(const core::memory* memory, const vertex_layout& layout) noexcept = 0;
+                virtual buffer_handle create_index_buffer(const core::memory* memory) noexcept = 0;
                 virtual void set_viewport(const framebuffer_handle framebuffer, f32 x, f32 y, struct width width, struct height height) noexcept = 0;
                 virtual void attach_vertex_buffer(const buffer_handle handle) noexcept = 0;
                 virtual void set_vertex_buffer(const buffer_handle handle) noexcept = 0;
+                virtual void set_index_buffer(const buffer_handle handle) noexcept = 0;
 
                 virtual void submit() = 0;
             
@@ -87,6 +89,10 @@ namespace blade
                 [[nodiscard]] program_handle create_view_program(const framebuffer_handle framebuffer, const shader_handle vertex, const shader_handle fragment) noexcept;
 
                 [[nodiscard]] buffer_handle create_vertex_buffer(const core::memory* memory, const vertex_layout& layout) noexcept;
+
+                [[nodiscard]] buffer_handle create_index_buffer(const core::memory* memory) const noexcept;
+
+                void set_index_buffer(const buffer_handle handle) const noexcept;
 
                 void attach_vertex_buffer(const buffer_handle handle) const noexcept;
 

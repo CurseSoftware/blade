@@ -46,6 +46,7 @@ namespace blade
                     void attach_vertex_buffer(std::weak_ptr<buffer> buffer) noexcept;
                     
                     void set_vertex_buffer(std::weak_ptr<buffer> buffer) noexcept;
+                    void set_index_buffer(std::shared_ptr<buffer> buffer) noexcept;
 
                 private:
                     bool create_swapchain_(struct width width, struct height height) noexcept;
@@ -69,7 +70,7 @@ namespace blade
                     VkFence in_flight_fence                                   {};
                     u32 current_image_index                                   { 0 };
                     std::weak_ptr<class buffer> buffer                 {};
-
+                    std::shared_ptr<class buffer> index_buffer                { nullptr };
             };
 
         } // vk namespace

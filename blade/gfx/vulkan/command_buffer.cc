@@ -150,6 +150,12 @@ namespace blade
                 vkCmdBindVertexBuffers(_recording._buffer.handle(), first_binding, binding_count, buffers, offsets);
             }
 
+            void command_buffer::recording::record_renderpass::bind_index_buffers(VkBuffer buffer, VkDeviceSize size) const noexcept
+            {
+                VkDeviceSize offset = 0;
+                vkCmdBindIndexBuffer(_recording._buffer.handle(), buffer, offset, VK_INDEX_TYPE_UINT16);
+            }
+
             void command_buffer::recording::record_renderpass::set_scissor(VkRect2D scissor) const noexcept
             {
                 const u32 scissor_count = 1;
@@ -160,6 +166,11 @@ namespace blade
             void command_buffer::recording::record_renderpass::draw(u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance) const noexcept
             {
                 vkCmdDraw(_recording._buffer.handle(), vertex_count, instance_count, first_vertex, first_instance);
+            }
+
+            void command_buffer::recording::record_renderpass::draw_indexed(u32 index_count, u32 instance_count, u32 first_index, i32 vertex_offset, u32 first_instance) const noexcept
+            {
+                vkCmdDrawIndexed(_recording._buffer.handle(), index_count, instance_count, first_index, vertex_offset, first_instance);
             }
 
             bool command_buffer::recording::record_renderpass::end() noexcept

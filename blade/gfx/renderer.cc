@@ -96,6 +96,16 @@ namespace blade
             return buffer_handle { BLADE_NULL_HANDLE };
         }
 
+        buffer_handle renderer::create_index_buffer(const core::memory* memory) const noexcept
+        {
+            if (_backend)
+            {
+                return _backend->create_index_buffer(memory);
+            }
+
+            return buffer_handle { BLADE_NULL_HANDLE };
+        }
+
         void renderer::attach_vertex_buffer(const buffer_handle handle) const noexcept
         {
             if (_backend)
@@ -104,6 +114,14 @@ namespace blade
             }
         }
         
+        void renderer::set_index_buffer(const buffer_handle handle) const noexcept
+        {
+            if (_backend)
+            {
+                _backend->set_index_buffer(handle);
+            }
+        }
+
         void renderer::set_vertex_buffer(const buffer_handle handle) const noexcept
         {
             if (_backend)

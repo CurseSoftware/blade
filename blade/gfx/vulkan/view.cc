@@ -157,6 +157,11 @@ namespace blade
                 this->buffer = vertex_buffer;
             }
 
+            void view::set_index_buffer(std::shared_ptr<class buffer> index_buffer) noexcept
+            {
+                this->index_buffer = index_buffer;
+            }
+
             bool view::create_swapchain_(struct width width, struct height height) noexcept
             {
                 swapchain = swapchain::builder(device, surface)
