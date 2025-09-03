@@ -26,7 +26,8 @@ namespace blade
                     std::optional<command_buffer::recording> begin(VkCommandBufferUsageFlags flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) noexcept;
                     void reset() const noexcept;
                     void submit(const std::vector<VkSemaphore>& semaphores) const noexcept;
-                    void end() const noexcept;
+                    void end() noexcept;
+                    [[nodiscard]] bool is_active() const noexcept { return _is_active; }
 
                 public:
                     class recording 
@@ -97,6 +98,7 @@ namespace blade
                 private:
                     VkCommandBuffer _buffer { VK_NULL_HANDLE };
                     bool is_recording       { false };
+                    bool _is_active         { false };
             };
 
             class command_pool
@@ -109,6 +111,43 @@ namespace blade
                         , const VkAllocationCallbacks* callbacks
                     ) noexcept;
 
+                    struct buffer_node
+                    {
+                        VkCommandBuffer command_buffer { VK_NULL_HANDLE };
+                        VkFence fence                  { VK_NULL_HANDLE };
+                        u64 last_frame_used            { 0 };
+                        u64 creation_frame             { 0 };
+                        u64 usage_count                { 0 };
+                        bool is_submitted              { false };
+                        buffer_node* next              { nullptr };
+
+                        [[nodiscard]] explicit buffer_node(
+                            VkCommandBuffer buffer
+                            , u64 frame
+                            , VkFence fence = VK_NULL_HANDLE
+                        ) noexcept  
+                            : command_buffer{ buffer }
+                            , fence{ fence }
+                            , last_frame_used{ frame }
+                            , creation_frame{ frame }
+                        {}
+                    };
+
+                    VkResult submit_buffer(
+                        VkCommandBuffer buffer
+                        , VkQueue queue
+                        , const VkSemaphore* wait_semaphores = nullptr
+                        , u32 wait_semaphore_count = 0
+                        , const VkSemaphore* signal_semaphores = nullptr
+                        , u32 signal_semaphore_count = 0
+                        , VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+                    ) const noexcept;
+
+                    void update() noexcept;
+
+                    void wait_for_command_buffer(VkCommandBuffer buffer) const noexcept;
+                    void reset_command_buffer_fence(VkCommandBuffer) const noexcept;
+
                     command_buffer& get_buffer(u32 index) const noexcept { return *_buffer_handlers[index].get(); }
 
                     /**
@@ -117,6 +156,8 @@ namespace blade
                      * @return `true` on success. `false` otherwise (typically attempting to create buffers after creating some before)
                      */
                     bool allocate_buffers(const u32 num_buffers) noexcept;
+
+                    VkCommandBuffer acquire_command_buffer() noexcept;
 
                     std::optional<command_buffer> allocate_single() noexcept;
 
@@ -152,11 +193,21 @@ namespace blade
                     };
 
                 private:
+                    std::optional<VkFence> create_fence_() const noexcept;
+                    void process_completed_buffers_() noexcept;
+                    void return_to_free_list_(buffer_node* node) noexcept;
+
+                private:
                     std::weak_ptr<class device> _device                           {};
                     VkCommandPool _command_pool                                   { VK_NULL_HANDLE };
                     const VkAllocationCallbacks* _allocation_callbacks            { nullptr };
                     std::vector<VkCommandBuffer> _buffers                         {};
                     std::vector<std::unique_ptr<command_buffer>> _buffer_handlers {};
+
+                    std::vector<std::unique_ptr<buffer_node>> _all_buffers {};
+                    std::unordered_map<VkCommandBuffer, buffer_node*> _active_buffers {};
+
+                    buffer_node* _free_list_head { nullptr };
             };
         } // vk namespace
     } // gfx namespace 

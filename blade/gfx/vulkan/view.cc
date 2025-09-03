@@ -1,5 +1,7 @@
 #include "gfx/vulkan/view.h"
 #include "gfx/program.h"
+#include "gfx/vulkan/command.h"
+#include "submit.h"
 #include <vulkan/vulkan_core.h>
 
 namespace blade
@@ -25,6 +27,16 @@ namespace blade
 
                 auto surface = surface_opt.value();
                 class view view(device, surface);
+
+                auto command_pool_opt = command_pool::builder(device)
+                    .use_allocation_callbacks(nullptr)
+                    .build();
+                if (!command_pool_opt.has_value())
+                {
+                    return std::nullopt;
+                }
+                view.command_pool = command_pool_opt.value();
+                view.command_pool->allocate_buffers(24);
 
                 if (info.native_window_data)
                 {
@@ -235,15 +247,25 @@ namespace blade
                 return true;
             }
 
-            void view::frame(class command_buffer& command_buffer) noexcept
+            void view::frame() noexcept
             {
-                
                 const u32 fence_count = 1;
                 const VkBool32 wait_all = VK_TRUE;
                 const u64 timeout = UINT64_MAX;
+
+                VkCommandBuffer cb = command_pool->acquire_command_buffer();
+
+                // If no valid buffers -> return
+                // TODO: move this into command_pool API?
+                if (cb == VK_NULL_HANDLE)
+                {
+                    return;
+                }
                 
-                vkWaitForFences(device.lock()->handle(), fence_count, &in_flight_fence, wait_all, timeout);
-                vkResetFences(device.lock()->handle(), fence_count, &in_flight_fence);
+                class command_buffer command_buffer(cb);
+                command_pool->wait_for_command_buffer(command_buffer.handle());
+                
+                command_pool->reset_command_buffer_fence(command_buffer.handle());
                 
                 if (swapchain.has_value())
                 {
@@ -256,27 +278,18 @@ namespace blade
                 command_buffer.reset();
                 record_commands(command_buffer);
                 std::array<VkCommandBuffer, 1> command_buffers = { command_buffer.handle() };
-                
-                VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-                
-                VkSubmitInfo submit_info {
-                    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                    .waitSemaphoreCount = static_cast<u32>(wait_semaphores.size()),
-                    .pWaitSemaphores = wait_semaphores.data(),
-                    .pWaitDstStageMask = wait_stages,
-                    .commandBufferCount = 1,
-                    .pCommandBuffers = command_buffers.data(),
-                    .signalSemaphoreCount = static_cast<u32>(signal_semaphores.size()),
-                    .pSignalSemaphores = signal_semaphores.data(),
-                };
 
-                const VkResult submit_result = vkQueueSubmit(device.lock()->get_queue(queue_type::graphics).value(), 1, &submit_info, in_flight_fence);
-                if (submit_result != VK_SUCCESS)
-                {
-                    logger::error("FAILED TO SUBMIT");
-                    return;
-                }
-                // command_buffer.submit(signal_semaphores);
+                command_pool->submit_buffer(
+                    command_buffer.handle()
+                    , device.lock()->get_queue(queue_type::graphics).value()
+                    , wait_semaphores.data()
+                    , static_cast<u32>(wait_semaphores.size())
+                    , signal_semaphores.data()
+                    , static_cast<u32>(signal_semaphores.size())
+                    , VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                );
+                
+                command_pool->update();
                 
                 if (swapchain.has_value())
                 {
@@ -297,6 +310,13 @@ namespace blade
 
             void view::destroy() noexcept
             {
+                if (command_pool)
+                {
+                    logger::info("Destroying command pool...");
+                    command_pool->destroy();
+                    logger::info("Destroyed.");
+                }
+                
                 if (graphics_pipeline)
                 {
                     logger::info("Destroying graphics pipeline...");

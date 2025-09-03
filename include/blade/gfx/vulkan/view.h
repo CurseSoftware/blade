@@ -23,6 +23,7 @@ namespace blade
             class view
             {
                 public:
+                    // TODO: use command submission from each view
                     view(std::weak_ptr<class device> device, std::shared_ptr<class surface> surface) noexcept;
 
                     void destroy() noexcept;
@@ -32,7 +33,7 @@ namespace blade
                    
                     void record_commands(class command_buffer& command_buffer) const noexcept;
 
-                    void frame(class command_buffer& command_buffer) noexcept;
+                    void frame() noexcept;
 
                     VkExtent2D get_extent() const noexcept;
 
@@ -53,6 +54,7 @@ namespace blade
                    
                 private:
                     std::weak_ptr<class device> device                        {};
+                    std::shared_ptr<class command_pool> command_pool          {};
                     std::shared_ptr<struct surface> surface                   { nullptr };
                     std::optional<std::unique_ptr<class swapchain>> swapchain { std::nullopt };
                     std::vector<VkFramebuffer> framebuffers                   {};

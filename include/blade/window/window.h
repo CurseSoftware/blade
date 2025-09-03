@@ -36,7 +36,7 @@ namespace blade
             /// @brief Set the title of the window
             /// @param title Title to change window title to
             /// @return `true` if successful `false` otherwise
-            bool set_title(const std::string& title);
+            bool set_title(const std::string& title) noexcept;
 
             /// @brief close the window
             void close();
