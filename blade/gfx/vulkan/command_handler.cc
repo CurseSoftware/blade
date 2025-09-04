@@ -10,7 +10,7 @@ namespace blade
             command_handler::command_handler(std::weak_ptr<class device> device) noexcept
                 : _device{ device}
             {
-                constexpr u32 num_buffers = 8;
+                constexpr u32 num_buffers = 16;
                 auto pool_opt = command_pool::builder(device)
                     .use_allocation_callbacks(nullptr)
                     .build();
