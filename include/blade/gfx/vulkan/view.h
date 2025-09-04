@@ -4,6 +4,7 @@
 #include "gfx/program.h"
 #include "gfx/view.h"
 #include "gfx/vulkan/buffer.h"
+#include "gfx/vulkan/command_handler.h"
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/device.h"
 #include "gfx/vulkan/renderpass.h"
@@ -55,7 +56,8 @@ namespace blade
                    
                 private:
                     std::weak_ptr<class device> device                        {};
-                    std::shared_ptr<class command_pool> command_pool          {};
+                    command_handler cmd_handler;
+                    // std::shared_ptr<class command_pool> command_pool          {};
                     std::shared_ptr<struct surface> surface                   { nullptr };
                     std::optional<std::unique_ptr<class swapchain>> swapchain { std::nullopt };
                     std::vector<VkFramebuffer> framebuffers                   {};
