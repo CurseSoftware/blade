@@ -91,14 +91,8 @@ namespace blade
                 }
 
                 logger::info("Creating command pool");
-//                auto pool_res = command_pool::builder(_device)
-//                    .use_allocation_callbacks(nullptr)
-//                    .set_queue_family_index(_device->get_physical_device().lock()->graphics_queue_index().value())
-//                    .build();
 
                 _cmd_handler = std::make_shared<command_handler>(_device);
-//                _command_pool = pool_res.value();
-//                _command_pool->allocate_buffers(8);
 
                 _is_initialized = true;
                 return true;
@@ -188,13 +182,6 @@ namespace blade
                     view.second.destroy();
                     logger::info("Destroyed view {}.", view.first.index);
                 }
-
-//                logger::info("Destroying command pool...");
-//                if (_command_pool)
-//                {
-//                    _command_pool->destroy();
-//                }
-//                logger::info("Destroyed.");
 
                 logger::info("Destroying device...");
                 if (_device)
@@ -479,23 +466,20 @@ namespace blade
                 auto index_buffer = index_buffer_opt.value();
                 index_buffer->allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-                // class command_buffer command_buffer(_command_pool->acquire_command_buffer());
                 class command_buffer command_buffer(_cmd_handler->acquire_command_buffer());
+                
                 command_buffer.begin()
                     ->begin_transfer()
                     .copy_buffers(staging_buffer->handle(), index_buffer->handle(), memory->size);
+                
                 command_buffer.end();
 
                 VkResult submit_result = _cmd_handler->submit_buffer(
                     command_buffer.handle()
                     , _device->get_queue(queue_type::transfer).value()
                 );
-//                _command_pool->submit_buffer(
-//                    command_buffer.handle()
-//                    , _device->get_queue(queue_type::transfer).value()
-//                );
                 _cmd_handler->update();
-                // _command_pool->update();
+                
                 vkQueueWaitIdle(_device->get_queue(queue_type::transfer).value());
                 staging_buffer->destroy();
 
@@ -543,7 +527,6 @@ namespace blade
                 logger::info("STRIDE: {}", layout.stride());
 
                 class command_buffer command_buffer(_cmd_handler->acquire_command_buffer());
-                // class command_buffer command_buffer(_command_pool->acquire_command_buffer());
                 command_buffer.begin()
                     ->begin_transfer()
                     .copy_buffers(staging_buffer->handle(), vertex_buffer->handle(), memory->size);
@@ -553,11 +536,7 @@ namespace blade
                     command_buffer.handle()
                     , _device->get_queue(queue_type::transfer).value()
                 );
-//                _command_pool->submit_buffer(
-//                    command_buffer.handle()
-//                    , _device->get_queue(queue_type::transfer).value()
-//                );
-//                _command_pool->update();
+                
                 _cmd_handler->update();
                 vkQueueWaitIdle(_device->get_queue(queue_type::transfer).value());
                 

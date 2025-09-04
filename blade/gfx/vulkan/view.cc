@@ -29,16 +29,6 @@ namespace blade
                 auto surface = surface_opt.value();
                 class view view(device, surface);
 
-//                auto command_pool_opt = command_pool::builder(device)
-//                    .use_allocation_callbacks(nullptr)
-//                    .build();
-//                if (!command_pool_opt.has_value())
-//                {
-//                    return std::nullopt;
-//                }
-                // view.command_pool = command_pool_opt.value();
-                // view.command_pool->allocate_buffers(24);
-
                 if (info.native_window_data)
                 {
                     logger::info("Creating swapchain...");
@@ -184,7 +174,6 @@ namespace blade
 
             void view::set_viewport(f32 x, f32 y, struct width width, struct height height) noexcept
             {
-                // logger::info("Viewport: {}, {}", width.w, height.h);
                 viewport = VkViewport {
                     .x = x,
                     .y = y,
@@ -259,7 +248,6 @@ namespace blade
                 const VkBool32 wait_all = VK_TRUE;
                 const u64 timeout = UINT64_MAX;
 
-                // VkCommandBuffer cb = command_pool->acquire_command_buffer();
                 VkCommandBuffer cb = cmd_handler.acquire_command_buffer();
 
                 // If no valid buffers -> return
@@ -272,9 +260,6 @@ namespace blade
                 class command_buffer command_buffer(cb);
                 cmd_handler.wait_for_command_buffer(cb);
                 cmd_handler.reset_command_buffer_fence(cb);
-                // command_pool->wait_for_command_buffer(command_buffer.handle());
-                
-                // command_pool->reset_command_buffer_fence(command_buffer.handle());
                 
                 if (swapchain.has_value())
                 {
@@ -298,20 +283,8 @@ namespace blade
                     , VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
                 );
                 // TODO check result
-                /*
-                command_pool->submit_buffer(
-                    command_buffer.handle()
-                    , device.lock()->get_queue(queue_type::graphics).value()
-                    , wait_semaphores.data()
-                    , static_cast<u32>(wait_semaphores.size())
-                    , signal_semaphores.data()
-                    , static_cast<u32>(signal_semaphores.size())
-                    , VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-                );
-                */
                 
                 cmd_handler.update();
-                // command_pool->update();
                 
                 if (swapchain.has_value())
                 {
@@ -333,12 +306,6 @@ namespace blade
             void view::destroy() noexcept
             {
                 cmd_handler.destroy();
-//                if (command_pool)
-//                {
-//                    logger::info("Destroying command pool...");
-//                    command_pool->destroy();
-//                    logger::info("Destroyed.");
-//                }
                 
                 if (graphics_pipeline)
                 {
