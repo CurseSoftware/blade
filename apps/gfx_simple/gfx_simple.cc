@@ -158,7 +158,6 @@ int main(void)
         frame_count++;
     }
 
-    
     gfx->shutdown();
 
     logger::info("GFX Example");

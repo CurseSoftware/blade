@@ -4,6 +4,7 @@
 #include "gfx/program.h"
 #include "gfx/view.h"
 #include "gfx/vulkan/buffer.h"
+#include "gfx/vulkan/command_handler.h"
 #include "gfx/vulkan/common.h"
 #include "gfx/vulkan/device.h"
 #include "gfx/vulkan/renderpass.h"
@@ -48,14 +49,18 @@ namespace blade
                     void set_vertex_buffer(std::weak_ptr<buffer> buffer) noexcept;
                     void set_index_buffer(std::shared_ptr<buffer> buffer) noexcept;
 
+
                 private:
+                    bool recreate_swapchain_(struct width width, struct height height) noexcept;
                     bool create_swapchain_(struct width width, struct height height) noexcept;
                     bool create_renderpass_() noexcept;
+                    void destroy_framebuffers_() noexcept;
                     VkFormat get_format_() const noexcept;
                    
                 private:
                     std::weak_ptr<class device> device                        {};
-                    std::shared_ptr<class command_pool> command_pool          {};
+                    command_handler cmd_handler;
+                    // std::shared_ptr<class command_pool> command_pool          {};
                     std::shared_ptr<struct surface> surface                   { nullptr };
                     std::optional<std::unique_ptr<class swapchain>> swapchain { std::nullopt };
                     std::vector<VkFramebuffer> framebuffers                   {};
@@ -71,6 +76,11 @@ namespace blade
                     u32 current_image_index                                   { 0 };
                     std::weak_ptr<class buffer> buffer                 {};
                     std::shared_ptr<class buffer> index_buffer                { nullptr };
+
+                    u32 cached_width  { 0 };
+                    u32 cached_height { 0 };
+                    u32 cached_width_prev { 0 };
+                    u32 cached_height_prev { 0 };
             };
 
         } // vk namespace

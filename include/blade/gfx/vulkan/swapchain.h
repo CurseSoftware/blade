@@ -93,6 +93,7 @@ namespace blade
                                 } extent {};
                             } info;
 
+
                         private:
                             VkSurfaceFormatKHR select_surface_format_(const std::vector<VkSurfaceFormatKHR>& formats) const noexcept;
                             VkPresentModeKHR select_present_mode_(const std::vector<VkPresentModeKHR>& present_modes) const noexcept;
@@ -112,7 +113,8 @@ namespace blade
                     const std::vector<VkImageView>& get_image_views() const noexcept { return _image_views; }
                     const VkImageView* get_image_views_raw() const noexcept { return _image_views.data(); }
                     VkFormat get_format() const noexcept { return _format; }
-                    u32 get_image_index(VkSemaphore semaphore, VkFence fence = VK_NULL_HANDLE) const noexcept;
+                    
+                    [[nodiscard]] std::optional<u32> get_image_index(VkSemaphore semaphore, VkFence fence = VK_NULL_HANDLE) const noexcept;
 
                 private:
                     std::weak_ptr<const class device> _device {};
