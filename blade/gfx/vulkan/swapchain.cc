@@ -275,11 +275,15 @@ namespace blade
                 return images;
             }
 
-            u32 swapchain::get_image_index(VkSemaphore semaphore, VkFence fence) const noexcept
+            std::optional<u32> swapchain::get_image_index(VkSemaphore semaphore, VkFence fence) const noexcept
             {
                 u32 index;
                 const u64 timeout = UINT64_MAX;
-                vkAcquireNextImageKHR(_device.lock()->handle(), handle(), timeout, semaphore, fence, &index);
+                VkResult result = vkAcquireNextImageKHR(_device.lock()->handle(), handle(), timeout, semaphore, fence, &index);
+                if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+                {
+                    return std::nullopt;
+                }
 
                 return index;
             }

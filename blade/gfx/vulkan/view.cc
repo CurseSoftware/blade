@@ -37,6 +37,11 @@ namespace blade
                     logger::info("Swapchain created.");
                 }
 
+                view.cached_width = info.width.w;
+                view.cached_height = info.height.h;
+                view.cached_width_prev = info.width.w;
+                view.cached_height_prev = info.height.h;
+
                 (void) view.create_renderpass_();
                 view.pipeline_builder
                     // ->set_extent(view.get_extent())
@@ -153,6 +158,37 @@ namespace blade
                 this->index_buffer = index_buffer;
             }
 
+            bool view::recreate_swapchain_(struct width width, struct height height) noexcept
+            {
+                logger::trace("Recreating swapchain {} by {}", width.w, height.h);
+                vkDeviceWaitIdle(device.lock()->handle());
+                destroy_framebuffers_();
+                
+                swapchain.value()->destroy();
+                swapchain = swapchain::builder(device, surface)
+                    .set_allocation_callbacks(nullptr)
+                    .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+                    .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+                    .set_clipped(VK_TRUE)
+                    .set_extent(width, height)
+                    .prefer_present_mode(present_mode::MAILBOX)
+                .build();
+
+                if (!swapchain.has_value())
+                {
+                    logger::error("Swapchain not recreated!");
+                    return false;
+                }
+
+                bool framebuffer_result = create_framebuffers();
+                if (!framebuffer_result)
+                {
+                    logger::error("Failed to create framebuffers");
+                    return false;
+                }
+                return true;
+            }
+
             bool view::create_swapchain_(struct width width, struct height height) noexcept
             {
                 swapchain = swapchain::builder(device, surface)
@@ -174,6 +210,12 @@ namespace blade
 
             void view::set_viewport(f32 x, f32 y, struct width width, struct height height) noexcept
             {
+                if (cached_width != width.w || cached_height != height.h)
+                {
+                    cached_width = width.w;
+                    cached_height = height.h;
+                }
+                
                 viewport = VkViewport {
                     .x = x,
                     .y = y,
@@ -197,9 +239,18 @@ namespace blade
 
                 return true;
             }
+
+            void view::destroy_framebuffers_() noexcept
+            {
+                for (const auto& framebuffer : framebuffers)
+                {
+                    vkDestroyFramebuffer(device.lock()->handle(), framebuffer, allocation_callbacks);
+                }
+            }
             
             bool view::create_framebuffers() noexcept
             {
+                framebuffers.clear();
                 usize num_images = 1;
                 if (swapchain.has_value())
                 {
@@ -222,7 +273,6 @@ namespace blade
                         .height = swapchain.value().get()->get_extent().height,
                         .layers = 1
                     };
-                    logger::info("Framebuffer info");
 
                     VkFramebuffer framebuffer;
                     const VkResult result = vkCreateFramebuffer(
@@ -235,7 +285,13 @@ namespace blade
 
                     if (result != VK_SUCCESS)
                     {
+                        logger::error("Failed to create framebuffer: {}", i);
                         return false;
+                    }
+
+                    if (framebuffer == VK_NULL_HANDLE)
+                    {
+                        logger::error("Framebuffer {} is null", i);
                     }
                 }
 
@@ -261,10 +317,28 @@ namespace blade
                 cmd_handler.wait_for_command_buffer(cb);
                 cmd_handler.reset_command_buffer_fence(cb);
                 
+                
                 if (swapchain.has_value())
                 {
-                    current_image_index = swapchain.value()->get_image_index(image_available_semaphore);
+                    auto idx = swapchain.value()->get_image_index(image_available_semaphore);
+                    
+                    if (cached_width != cached_width_prev || cached_height != cached_height_prev || !idx.has_value())
+                    {
+                        logger::error("Image index has no value!");
+                        recreate_swapchain_(cached_width, cached_height);
+                        cached_width_prev = cached_width;
+                        cached_height_prev = cached_height;
+                        return;
+                    }
+                    
+                    current_image_index = idx.value();
+                    // logger::trace("Image index: {}", current_image_index);
                 }
+
+                // logger::trace("Begin frame");
+                
+                cached_width_prev = cached_width;
+                cached_height_prev = cached_height;
 
                 const std::vector<VkSemaphore> signal_semaphores = { render_finished_semaphore };
                 const std::vector<VkSemaphore> wait_semaphores = { image_available_semaphore };
@@ -299,7 +373,7 @@ namespace blade
                         .pImageIndices = &current_image_index
                     };
 
-                    vkQueuePresentKHR(device.lock()->get_queue(queue_type::graphics).value(), &present_info);
+                    const VkResult present_result = vkQueuePresentKHR(device.lock()->get_queue(queue_type::graphics).value(), &present_info);
                 }
             }
 
@@ -327,10 +401,11 @@ namespace blade
                 vkDestroySemaphore(device.lock()->handle(), render_finished_semaphore, allocation_callbacks);
                 vkDestroySemaphore(device.lock()->handle(), image_available_semaphore, allocation_callbacks);
                 
-                for (const auto& framebuffer : framebuffers)
-                {
-                    vkDestroyFramebuffer(device.lock()->handle(), framebuffer, allocation_callbacks);
-                }
+                destroy_framebuffers_();
+//                for (const auto& framebuffer : framebuffers)
+//                {
+//                    vkDestroyFramebuffer(device.lock()->handle(), framebuffer, allocation_callbacks);
+//                }
                 
                 if (swapchain.has_value())
                 {
