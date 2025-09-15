@@ -11,22 +11,24 @@ namespace blade
         namespace vk
         {
             view::view(std::weak_ptr<class device> device, std::shared_ptr<class surface> surface) noexcept
-                : device{ device }
-                , surface { surface }
-                , pipeline_builder{ std::make_unique<pipeline::builder>(device) }
-                , cmd_handler{ device }
-            {}
-            
-            std::optional<view> view::create(std::weak_ptr<class instance> instance, std::weak_ptr<class device> device, const framebuffer_create_info info) noexcept
+                : device{device}
+                  , surface{surface}
+                  , pipeline_builder{std::make_unique<pipeline::builder>(device)}
+                  , cmd_handler{device, queue_type::graphics}
             {
-                auto surface_opt = surface::create(instance, info);
+            }
+
+            std::optional<view> view::create(std::weak_ptr<class instance> instance, std::weak_ptr<class device> device,
+                                             const framebuffer_create_info info) noexcept
+            {
+                const auto surface_opt = surface::create(instance, info);
                 if (!surface_opt.has_value())
                 {
                     logger::error("Failed to create framebuffer");
                     return std::nullopt;
                 }
 
-                auto surface = surface_opt.value();
+                const auto& surface = surface_opt.value();
                 class view view(device, surface);
 
                 if (info.native_window_data)
@@ -42,38 +44,42 @@ namespace blade
                 view.cached_width_prev = info.width.w;
                 view.cached_height_prev = info.height.h;
 
-                (void) view.create_renderpass_();
+                (void)view.create_renderpass_();
                 view.pipeline_builder
                     // ->set_extent(view.get_extent())
-                    ->add_viewport(VkViewport  {
+                    ->add_viewport(VkViewport{
                         .x = 0.0f,
                         .y = 0.0f,
-                        .width =  static_cast<f32>(view.get_extent().width),
+                        .width = static_cast<f32>(view.get_extent().width),
                         .height = static_cast<f32>(view.get_extent().height),
                         .minDepth = 0.0f,
                         .maxDepth = 1.0f
                     })
-                    .add_scissor(VkRect2D {
-                        .offset = { 0, 0 },
+                    .add_scissor(VkRect2D{
+                        .offset = {0, 0},
                         .extent = view.get_extent()
                     })
                     // .set_rasterization_polygon_mode(VK_POLYGON_MODE_LINE)
                     ;
 
-                VkSemaphoreCreateInfo semaphore_info { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-                VkFenceCreateInfo fence_info { 
+                constexpr VkSemaphoreCreateInfo semaphore_info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+                constexpr VkFenceCreateInfo fence_info{
                     .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
                     .flags = VK_FENCE_CREATE_SIGNALED_BIT
                 };
 
-                const VkResult image_available_sem_result = vkCreateSemaphore(device.lock()->handle(), &semaphore_info, nullptr, &view.image_available_semaphore);
-                const VkResult render_finished_sem_result = vkCreateSemaphore(device.lock()->handle(), &semaphore_info, nullptr, &view.render_finished_semaphore);
-                const VkResult fence_result = vkCreateFence(device.lock()->handle(), &fence_info, nullptr, &view.in_flight_fence);
+                const VkResult image_available_sem_result = vkCreateSemaphore(
+                    device.lock()->handle(), &semaphore_info, nullptr, &view.image_available_semaphore);
+                const VkResult render_finished_sem_result = vkCreateSemaphore(
+                    device.lock()->handle(), &semaphore_info, nullptr, &view.render_finished_semaphore);
+                const VkResult fence_result = vkCreateFence(device.lock()->handle(), &fence_info, nullptr,
+                                                            &view.in_flight_fence);
 
                 if (image_available_sem_result != VK_SUCCESS
                     || render_finished_sem_result != VK_SUCCESS
                     || fence_result != VK_SUCCESS
-                ) {
+                )
+                {
                     logger::info("Failed to create synchronization objects");
                     return std::nullopt;
                 }
@@ -96,7 +102,7 @@ namespace blade
 
             bool view::create_renderpass_() noexcept
             {
-                VkAttachmentDescription color_attachment {
+                VkAttachmentDescription color_attachment{
                     .format = get_format_(),
                     .samples = VK_SAMPLE_COUNT_1_BIT,
                     .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -106,19 +112,19 @@ namespace blade
                     .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
                     .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
                 };
-                
-                VkAttachmentReference color_attachment_reference {
+
+                VkAttachmentReference color_attachment_reference{
                     .attachment = 0,
                     .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 };
 
-                VkSubpassDescription subpass {
+                VkSubpassDescription subpass{
                     .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
                     .colorAttachmentCount = 1,
                     .pColorAttachments = &color_attachment_reference,
                 };
-           
-                VkSubpassDependency dependency {
+
+                VkSubpassDependency dependency{
                     .srcSubpass = VK_SUBPASS_EXTERNAL,
                     .dstSubpass = 0,
                     .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -128,11 +134,11 @@ namespace blade
                 };
 
                 renderpass = renderpass::builder(device)
-                    .add_subpass_description(subpass)
-                    .add_attachment(color_attachment)
-                    .add_subpass_dependency(dependency)
-                    .build()
-                    .value();
+                             .add_subpass_description(subpass)
+                             .add_attachment(color_attachment)
+                             .add_subpass_dependency(dependency)
+                             .build()
+                             .value();
 
                 return true;
             }
@@ -143,7 +149,8 @@ namespace blade
                 pipeline_builder->add_vertex_input_binding_description(buffer.lock()->binding_description());
                 for (auto attr_desc : buffer.lock()->attribute_descriptions())
                 {
-                    logger::debug("Attaching attribute: location: [{}]. binding: [{}]. offset: [{}]", attr_desc.location, attr_desc.binding, attr_desc.offset);
+                    logger::debug("Attaching attribute: location: [{}]. binding: [{}]. offset: [{}]",
+                                  attr_desc.location, attr_desc.binding, attr_desc.offset);
                     pipeline_builder->add_vertex_input_attribute_description(attr_desc);
                 }
             }
@@ -163,16 +170,16 @@ namespace blade
                 logger::trace("Recreating swapchain {} by {}", width.w, height.h);
                 vkDeviceWaitIdle(device.lock()->handle());
                 destroy_framebuffers_();
-                
+
                 swapchain.value()->destroy();
                 swapchain = swapchain::builder(device, surface)
-                    .set_allocation_callbacks(nullptr)
-                    .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
-                    .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-                    .set_clipped(VK_TRUE)
-                    .set_extent(width, height)
-                    .prefer_present_mode(present_mode::MAILBOX)
-                .build();
+                            .set_allocation_callbacks(nullptr)
+                            .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+                            .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+                            .set_clipped(VK_TRUE)
+                            .set_extent(width, height)
+                            .prefer_present_mode(present_mode::MAILBOX)
+                            .build();
 
                 if (!swapchain.has_value())
                 {
@@ -192,13 +199,13 @@ namespace blade
             bool view::create_swapchain_(struct width width, struct height height) noexcept
             {
                 swapchain = swapchain::builder(device, surface)
-                    .set_allocation_callbacks(nullptr)
-                    .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
-                    .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-                    .set_clipped(VK_TRUE)
-                    .set_extent(width, height)
-                    .prefer_present_mode(present_mode::MAILBOX)
-                    .build();
+                            .set_allocation_callbacks(nullptr)
+                            .set_composite_alpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+                            .require_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+                            .set_clipped(VK_TRUE)
+                            .set_extent(width, height)
+                            .prefer_present_mode(present_mode::MAILBOX)
+                            .build();
 
                 if (!swapchain.has_value())
                 {
@@ -215,8 +222,8 @@ namespace blade
                     cached_width = width.w;
                     cached_height = height.h;
                 }
-                
-                viewport = VkViewport {
+
+                viewport = VkViewport{
                     .x = x,
                     .y = y,
                     .width = static_cast<float>(width.w),
@@ -226,16 +233,17 @@ namespace blade
                 };
             }
 
-            bool view::create_program(const struct program& program, const shader& vertex, const shader& fragment) noexcept
+            bool view::create_program(const struct program& program, const shader& vertex,
+                                      const shader& fragment) noexcept
             {
                 this->program = program;
                 graphics_pipeline = pipeline_builder
-                    ->add_shader(shader::type::vertex, vertex.handle())
-                    .add_shader(shader::type::fragment, fragment.handle())
-                    .add_renderpass(renderpass->handle())
-                    .add_dynamic_state(VK_DYNAMIC_STATE_VIEWPORT)
-                    .add_dynamic_state(VK_DYNAMIC_STATE_SCISSOR)
-                    .build().value();
+                                    ->add_shader(shader::type::vertex, vertex.handle())
+                                    .add_shader(shader::type::fragment, fragment.handle())
+                                    .add_renderpass(renderpass->handle())
+                                    .add_dynamic_state(VK_DYNAMIC_STATE_VIEWPORT)
+                                    .add_dynamic_state(VK_DYNAMIC_STATE_SCISSOR)
+                                    .build().value();
 
                 return true;
             }
@@ -247,7 +255,7 @@ namespace blade
                     vkDestroyFramebuffer(device.lock()->handle(), framebuffer, allocation_callbacks);
                 }
             }
-            
+
             bool view::create_framebuffers() noexcept
             {
                 framebuffers.clear();
@@ -264,7 +272,7 @@ namespace blade
                         swapchain.value().get()->get_image_view(i)
                     };
 
-                    VkFramebufferCreateInfo framebuffer_info {
+                    VkFramebufferCreateInfo framebuffer_info{
                         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                         .renderPass = renderpass->handle(),
                         .attachmentCount = static_cast<u32>(attachments.size()),
@@ -312,16 +320,16 @@ namespace blade
                 {
                     return;
                 }
-                
+
                 class command_buffer command_buffer(cb);
                 cmd_handler.wait_for_command_buffer(cb);
                 cmd_handler.reset_command_buffer_fence(cb);
-                
-                
+
+
                 if (swapchain.has_value())
                 {
                     auto idx = swapchain.value()->get_image_index(image_available_semaphore);
-                    
+
                     if (cached_width != cached_width_prev || cached_height != cached_height_prev || !idx.has_value())
                     {
                         logger::error("Image index has no value!");
@@ -330,22 +338,20 @@ namespace blade
                         cached_height_prev = cached_height;
                         return;
                     }
-                    
+
                     current_image_index = idx.value();
                     // logger::trace("Image index: {}", current_image_index);
                 }
 
-                // logger::trace("Begin frame");
-                
                 cached_width_prev = cached_width;
                 cached_height_prev = cached_height;
 
-                const std::vector<VkSemaphore> signal_semaphores = { render_finished_semaphore };
-                const std::vector<VkSemaphore> wait_semaphores = { image_available_semaphore };
-                
+                const std::vector<VkSemaphore> signal_semaphores = {render_finished_semaphore};
+                const std::vector<VkSemaphore> wait_semaphores = {image_available_semaphore};
+
                 command_buffer.reset();
                 record_commands(command_buffer);
-                std::array<VkCommandBuffer, 1> command_buffers = { command_buffer.handle() };
+                std::array<VkCommandBuffer, 1> command_buffers = {command_buffer.handle()};
 
                 VkResult result = cmd_handler.submit_buffer(
                     command_buffer.handle()
@@ -357,14 +363,14 @@ namespace blade
                     , VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
                 );
                 // TODO check result
-                
+
                 cmd_handler.update();
-                
+
                 if (swapchain.has_value())
                 {
-                    std::array<VkSwapchainKHR, 1> swapchains = { swapchain.value()->handle() };
-                    
-                    VkPresentInfoKHR present_info {
+                    std::array<VkSwapchainKHR, 1> swapchains = {swapchain.value()->handle()};
+
+                    VkPresentInfoKHR present_info{
                         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
                         .waitSemaphoreCount = static_cast<u32>(signal_semaphores.size()),
                         .pWaitSemaphores = signal_semaphores.data(),
@@ -373,14 +379,15 @@ namespace blade
                         .pImageIndices = &current_image_index
                     };
 
-                    const VkResult present_result = vkQueuePresentKHR(device.lock()->get_queue(queue_type::graphics).value(), &present_info);
+                    const VkResult present_result = vkQueuePresentKHR(
+                        device.lock()->get_queue(queue_type::graphics).value(), &present_info);
                 }
             }
 
             void view::destroy() noexcept
             {
                 cmd_handler.destroy();
-                
+
                 if (graphics_pipeline)
                 {
                     logger::info("Destroying graphics pipeline...");
@@ -400,20 +407,19 @@ namespace blade
                 vkDestroyFence(device.lock()->handle(), in_flight_fence, allocation_callbacks);
                 vkDestroySemaphore(device.lock()->handle(), render_finished_semaphore, allocation_callbacks);
                 vkDestroySemaphore(device.lock()->handle(), image_available_semaphore, allocation_callbacks);
-                
+
                 destroy_framebuffers_();
-//                for (const auto& framebuffer : framebuffers)
-//                {
-//                    vkDestroyFramebuffer(device.lock()->handle(), framebuffer, allocation_callbacks);
-//                }
-                
+                //                for (const auto& framebuffer : framebuffers)
+                //                {
+                //                    vkDestroyFramebuffer(device.lock()->handle(), framebuffer, allocation_callbacks);
+                //                }
+
                 if (swapchain.has_value())
                 {
                     swapchain.value()->destroy();
                 }
                 surface->destroy();
             }
-
         } // vk namespace
     } // gfx namespace
 } // blade namespace

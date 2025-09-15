@@ -16,9 +16,10 @@ namespace blade
             std::optional<std::unique_ptr<swapchain>> swapchain::builder::build() const noexcept
             {
                 auto swapchain = std::make_unique<class swapchain>(info.device);
-                
+
                 const u32 num_image_array_layers = 1;
-                const VkSurfaceCapabilitiesKHR capabilities = info.device.lock()->surface_capabilities(*info.surface.lock());
+                const VkSurfaceCapabilitiesKHR capabilities = info.device.lock()->surface_capabilities(
+                    *info.surface.lock());
                 const auto formats = info.device.lock()->surface_formats(*info.surface.lock());
                 const auto present_modes = info.device.lock()->surface_present_modes(*info.surface.lock());
 
@@ -36,42 +37,59 @@ namespace blade
                     logger::error("Present queue does not have value");
                     return std::nullopt;
                 }
-                
+
                 u32 graphics_queue_index = graphics_queue_index_opt.value();
                 u32 present_queue_index = present_queue_index_opt.value();
                 const std::array<u32, 2> queue_family_indices = {graphics_queue_index, present_queue_index};
 
-                VkSurfaceFormatKHR selected_format = select_surface_format_(formats);
-                VkPresentModeKHR selected_present_mode = select_present_mode_(present_modes);
+                const VkSurfaceFormatKHR selected_format = select_surface_format_(formats);
+                const VkPresentModeKHR selected_present_mode = select_present_mode_(present_modes);
+                switch (selected_present_mode)
+                {
+                case VK_PRESENT_MODE_MAILBOX_KHR:
+                    logger::trace("MAILBOX");
+                    break;
+                case VK_PRESENT_MODE_FIFO_KHR:
+                    logger::trace("FIFO");
+                    break;
+                case VK_PRESENT_MODE_IMMEDIATE_KHR:
+                    logger::trace("IMMEDIATE");
+                    break;
+                default:
+                    logger::trace("UNKNOWN PRESENT MODE");
+                    break;
+                }
                 VkExtent2D selected_extent = select_extent_(capabilities);
 
-                const u32 image_count = [this, capabilities]() -> u32 
+                const u32 image_count = [this, capabilities]() -> u32
                 {
-                    switch(capabilities.maxImageCount)
+                    switch (capabilities.maxImageCount)
                     {
-                        // 0 Is special case with maxImageCount where there is "no limit" on swapchain images
-                        case 0:
-                            return std::max<u32>(info.min_image_count, capabilities.minImageCount+1);
-                        
-                        default:
-                            return std::clamp<u32>(info.min_image_count, capabilities.minImageCount+1, capabilities.maxImageCount);
+                    // 0 Is special case with maxImageCount where there is "no limit" on swapchain images
+                    case 0:
+                        return std::max<u32>(info.min_image_count, capabilities.minImageCount + 1);
+
+                    default:
+                        return std::clamp<u32>(info.min_image_count, capabilities.minImageCount + 1,
+                                               capabilities.maxImageCount);
                     }
                 }();
 
 
                 if ((selected_present_mode == VK_PRESENT_MODE_IMMEDIATE_KHR
-                    || selected_present_mode == VK_PRESENT_MODE_MAILBOX_KHR
-                    || selected_present_mode == VK_PRESENT_MODE_FIFO_KHR
-                    || selected_present_mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR
+                        || selected_present_mode == VK_PRESENT_MODE_MAILBOX_KHR
+                        || selected_present_mode == VK_PRESENT_MODE_FIFO_KHR
+                        || selected_present_mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR
                     ) && (
                         (info.image_usage & capabilities.supportedUsageFlags) != info.image_usage
                     )
-                ) {
+                )
+                {
                     logger::error("Usage flags do not match presentation mode");
                     return std::nullopt;
                 }
 
-                VkSwapchainCreateInfoKHR create_info {
+                VkSwapchainCreateInfoKHR create_info{
                     .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
                     .surface = info.surface.lock()->vk_surface,
                     .minImageCount = image_count,
@@ -111,7 +129,7 @@ namespace blade
                     logger::error("vkCreateSwapchainKHR call failed");
                     return std::nullopt;
                 }
-                
+
                 swapchain->_format = selected_format.format;
                 swapchain->_extent = selected_extent;
                 swapchain->_allocation_callbacks = info.allocation_callbacks;
@@ -170,29 +188,30 @@ namespace blade
 
                 return *this;
             }
-            
+
             swapchain::builder& swapchain::builder::set_composite_alpha(VkCompositeAlphaFlagBitsKHR alpha) noexcept
             {
                 info.composite_alpha = alpha;
 
                 return *this;
             }
-            
+
             swapchain::builder& swapchain::builder::set_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept
             {
                 info.allocation_callbacks = callbacks;
 
                 return *this;
             }
-            
+
             swapchain::builder& swapchain::builder::set_clipped(VkBool32 clipped) noexcept
             {
                 info.clipped = clipped;
 
                 return *this;
             }
-            
-            VkSurfaceFormatKHR swapchain::builder::select_surface_format_(const std::vector<VkSurfaceFormatKHR>& available_formats) const noexcept
+
+            VkSurfaceFormatKHR swapchain::builder::select_surface_format_(
+                const std::vector<VkSurfaceFormatKHR>& available_formats) const noexcept
             {
                 VkSurfaceFormatKHR best_format = available_formats[0];
                 for (const auto& available_format : available_formats)
@@ -210,10 +229,15 @@ namespace blade
 
                 return best_format;
             }
-                
-            VkPresentModeKHR swapchain::builder::select_present_mode_(const std::vector<VkPresentModeKHR>& available_present_modes) const noexcept
+
+            VkPresentModeKHR swapchain::builder::select_present_mode_(
+                const std::vector<VkPresentModeKHR>& available_present_modes) const noexcept
             {
                 VkPresentModeKHR preferred_present_mode_vk = present_mode_to_vulkan(info.preferred_present_mode);
+                if (preferred_present_mode_vk == VK_PRESENT_MODE_MAILBOX_KHR)
+                {
+                    logger::trace("Preferring MAILBOX presentation mode.");
+                }
 
                 for (const auto& available_present_mode : available_present_modes)
                 {
@@ -221,10 +245,12 @@ namespace blade
                         return available_present_mode;
                 }
 
-                return VK_PRESENT_MODE_FIFO_KHR;
+                logger::warn("Preferred present mode not found");
+
+                return VK_PRESENT_MODE_IMMEDIATE_KHR;
             }
 
-            VkExtent2D swapchain::builder::select_extent_(const VkSurfaceCapabilitiesKHR &capabilities) const noexcept
+            VkExtent2D swapchain::builder::select_extent_(const VkSurfaceCapabilitiesKHR& capabilities) const noexcept
             {
                 if (capabilities.currentExtent.width != std::numeric_limits<u32>::max())
                 {
@@ -232,8 +258,10 @@ namespace blade
                 }
 
                 VkExtent2D extent = {
-                    .width = std::clamp(info.extent.width.w, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
-                    .height = std::clamp(info.extent.height.h, capabilities.minImageExtent.width, capabilities.maxImageExtent.height),
+                    .width = std::clamp(info.extent.width.w, capabilities.minImageExtent.width,
+                                        capabilities.maxImageExtent.width),
+                    .height = std::clamp(info.extent.height.h, capabilities.minImageExtent.width,
+                                         capabilities.maxImageExtent.height),
                 };
 
                 return extent;
@@ -241,7 +269,7 @@ namespace blade
 
             std::optional<std::vector<VkImage>> swapchain::create_images_() const noexcept
             {
-                std::vector<VkImage> images {};
+                std::vector<VkImage> images{};
                 u32 image_count = 0;
                 VkImage* dummy_images = nullptr;
 
@@ -256,9 +284,9 @@ namespace blade
                 {
                     return std::nullopt;
                 }
-                
+
                 images.resize(image_count);
-                
+
                 result = vkGetSwapchainImagesKHR(
                     _device.lock()->handle()
                     , _swapchain
@@ -279,7 +307,8 @@ namespace blade
             {
                 u32 index;
                 const u64 timeout = UINT64_MAX;
-                VkResult result = vkAcquireNextImageKHR(_device.lock()->handle(), handle(), timeout, semaphore, fence, &index);
+                VkResult result = vkAcquireNextImageKHR(_device.lock()->handle(), handle(), timeout, semaphore, fence,
+                                                        &index);
                 if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
                 {
                     return std::nullopt;
@@ -291,68 +320,68 @@ namespace blade
 
             //std::optional<swapchain> swapchain::create(const struct surface& surface, const struct device& device, struct create_info create_info) noexcept
             //{
-//                swapchain sw = swapchain(device, surface);
-//                auto details = device.query_swapchain_capabilities(surface);
-//                u32 num_image_array_layers = 1; // more than 1 layer per image is typically used in stereoscopic applications
-//                VkImage* dummy_images = nullptr;
-//                
-//                sw.details = details;
-//                
-//                VkSurfaceFormatKHR surface_format = select_surface_format(create_info.preferred_format, details.formats);
-//                VkPresentModeKHR present_mode = select_present_mode(create_info.present_mode, details.present_modes);
-//                VkExtent2D extent = select_swap_extent(details.capabilities, create_info.extent.width, create_info.extent.height);
-//
-//                u32 image_count = details.capabilities.minImageCount + 1;
-//                logger::info("Min image count: {}", image_count);
-//                if (details.capabilities.maxImageCount > 0 && image_count > details.capabilities.maxImageCount)
-//                {
-//                    image_count = details.capabilities.maxImageCount;
-//                }
-//
-//                VkSwapchainCreateInfoKHR swapchain_create_info {};
-//                swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-//                swapchain_create_info.imageFormat = surface_format.format;
-//                swapchain_create_info.imageColorSpace = surface_format.colorSpace;
-//                swapchain_create_info.imageExtent = extent;
-//                swapchain_create_info.imageArrayLayers = num_image_array_layers;
-//                swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-//                swapchain_create_info.surface = surface.vk_surface;
-//                swapchain_create_info.minImageCount = image_count;
-//
-//
-//                if (device.graphics_queue_family.index != device.present_queue_family.index)
-//                {
-//                    std::array<u32, 2> queue_family_indices = { device.graphics_queue_family.index, device.present_queue_family.index };
-//                    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-//                    swapchain_create_info.queueFamilyIndexCount = 2;
-//                    swapchain_create_info.pQueueFamilyIndices = queue_family_indices.data();
-//                }
-//                else
-//                {
-//                    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-//                    swapchain_create_info.queueFamilyIndexCount = 0;
-//                    swapchain_create_info.pQueueFamilyIndices = nullptr;
-//                }
-//
-//                swapchain_create_info.preTransform = details.capabilities.currentTransform;
-//                swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-//                swapchain_create_info.presentMode = present_mode;
-//                swapchain_create_info.clipped = VK_TRUE;
-//                swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
-//
-//                // VK_ASSERT(vkCreateSwapchainKHR(device.logical_device, &swapchain_create_info, nullptr, &sw.vk_swapchain));
-//                VK_ASSERT(vkCreateSwapchainKHR(device.logical_device, &swapchain_create_info, device.allocator, &sw.vk_swapchain));
-//
-//                VK_ASSERT(vkGetSwapchainImagesKHR(device.logical_device, sw.vk_swapchain, &image_count, dummy_images));
-//                sw.images.resize(image_count);
-//                VK_ASSERT(vkGetSwapchainImagesKHR(device.logical_device, sw.vk_swapchain, &image_count, sw.images.data()));
-//
-//                sw.format = surface_format.format;
-//                sw.extent = extent;
-//                sw.create_image_views();
-//
-//                return std::nullopt;
-//            }
+            //                swapchain sw = swapchain(device, surface);
+            //                auto details = device.query_swapchain_capabilities(surface);
+            //                u32 num_image_array_layers = 1; // more than 1 layer per image is typically used in stereoscopic applications
+            //                VkImage* dummy_images = nullptr;
+            //
+            //                sw.details = details;
+            //
+            //                VkSurfaceFormatKHR surface_format = select_surface_format(create_info.preferred_format, details.formats);
+            //                VkPresentModeKHR present_mode = select_present_mode(create_info.present_mode, details.present_modes);
+            //                VkExtent2D extent = select_swap_extent(details.capabilities, create_info.extent.width, create_info.extent.height);
+            //
+            //                u32 image_count = details.capabilities.minImageCount + 1;
+            //                logger::info("Min image count: {}", image_count);
+            //                if (details.capabilities.maxImageCount > 0 && image_count > details.capabilities.maxImageCount)
+            //                {
+            //                    image_count = details.capabilities.maxImageCount;
+            //                }
+            //
+            //                VkSwapchainCreateInfoKHR swapchain_create_info {};
+            //                swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+            //                swapchain_create_info.imageFormat = surface_format.format;
+            //                swapchain_create_info.imageColorSpace = surface_format.colorSpace;
+            //                swapchain_create_info.imageExtent = extent;
+            //                swapchain_create_info.imageArrayLayers = num_image_array_layers;
+            //                swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            //                swapchain_create_info.surface = surface.vk_surface;
+            //                swapchain_create_info.minImageCount = image_count;
+            //
+            //
+            //                if (device.graphics_queue_family.index != device.present_queue_family.index)
+            //                {
+            //                    std::array<u32, 2> queue_family_indices = { device.graphics_queue_family.index, device.present_queue_family.index };
+            //                    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            //                    swapchain_create_info.queueFamilyIndexCount = 2;
+            //                    swapchain_create_info.pQueueFamilyIndices = queue_family_indices.data();
+            //                }
+            //                else
+            //                {
+            //                    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            //                    swapchain_create_info.queueFamilyIndexCount = 0;
+            //                    swapchain_create_info.pQueueFamilyIndices = nullptr;
+            //                }
+            //
+            //                swapchain_create_info.preTransform = details.capabilities.currentTransform;
+            //                swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+            //                swapchain_create_info.presentMode = present_mode;
+            //                swapchain_create_info.clipped = VK_TRUE;
+            //                swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
+            //
+            //                // VK_ASSERT(vkCreateSwapchainKHR(device.logical_device, &swapchain_create_info, nullptr, &sw.vk_swapchain));
+            //                VK_ASSERT(vkCreateSwapchainKHR(device.logical_device, &swapchain_create_info, device.allocator, &sw.vk_swapchain));
+            //
+            //                VK_ASSERT(vkGetSwapchainImagesKHR(device.logical_device, sw.vk_swapchain, &image_count, dummy_images));
+            //                sw.images.resize(image_count);
+            //                VK_ASSERT(vkGetSwapchainImagesKHR(device.logical_device, sw.vk_swapchain, &image_count, sw.images.data()));
+            //
+            //                sw.format = surface_format.format;
+            //                sw.extent = extent;
+            //                sw.create_image_views();
+            //
+            //                return std::nullopt;
+            //            }
 
             std::optional<std::vector<VkImageView>> swapchain::create_image_views_() const noexcept
             {
@@ -360,8 +389,8 @@ namespace blade
                 {
                     return std::nullopt;
                 }
-                
-                std::vector<VkImageView> image_views {};
+
+                std::vector<VkImageView> image_views{};
                 image_views.resize(_images.size());
                 u32 base_mip_level = 0;
                 u32 level_count = 1;
@@ -370,7 +399,7 @@ namespace blade
 
                 for (usize i = 0; i < _images.size(); i++)
                 {
-                    VkImageViewCreateInfo create_info {
+                    VkImageViewCreateInfo create_info{
                         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                         .image = _images[i],
                         .viewType = VK_IMAGE_VIEW_TYPE_2D,
@@ -400,7 +429,7 @@ namespace blade
                         return std::nullopt;
                     }
                 }
-                
+
                 return image_views;
             }
 
@@ -417,7 +446,6 @@ namespace blade
                 vkDestroySwapchainKHR(_device.lock()->handle(), _swapchain, _allocation_callbacks);
                 logger::info("Destroyed.");
             }
-            
         } // vk namespace
     } // gfx namespace
 } // blade namespace

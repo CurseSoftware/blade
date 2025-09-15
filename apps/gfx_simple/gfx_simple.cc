@@ -17,18 +17,18 @@ namespace math = blade::math;
 
 struct vertex
 {
-    float positions[3] = { 0.f, 0.f, 0.f };
-    float color[3] = { 0.f, 0.f, 0.f };
+    float positions[3] = {0.f, 0.f, 0.f};
+    float color[3] = {0.f, 0.f, 0.f};
 };
 
 int main(void)
 {
     constexpr blade::u32 FRAME_WIDTH = 800;
     constexpr blade::u32 FRAME_HEIGHT = 600;
-    
+
     const auto width = blade::width(FRAME_WIDTH);
     const auto height = blade::height(FRAME_HEIGHT);
-    
+
     auto window_opt = blade::window::create(
         "Blade Window",
         width,
@@ -37,7 +37,7 @@ int main(void)
 
     auto window = std::move(window_opt.value());
 
-    gfx::init_info init {};
+    gfx::init_info init{};
     init.type = gfx::init_info::type::VULKAN;
     init.resolution.width = FRAME_WIDTH;
     init.resolution.height = FRAME_HEIGHT;
@@ -58,34 +58,36 @@ int main(void)
         .height = height
     });
 
-    auto vert_opt = fs::file::from_path("simple.vert.spv", fs::file_mode::read);
-    auto frag_opt = fs::file::from_path("simple.frag.spv", fs::file_mode::read);
+    auto vert_opt = fs::file::from_path("./simple.vert.spv", fs::file_mode::read);
+    auto frag_opt = fs::file::from_path("./simple.frag.spv", fs::file_mode::read);
 
     if (!vert_opt.has_value())
     {
         logger::error("Vertex file not read properly");
         return 1;
     }
-    
+
     if (!frag_opt.has_value())
     {
-        logger::error("Vertex file not read properly");
+        logger::error("Frag file not read properly");
         return 1;
     }
 
     constexpr blade::usize SIZEOF_POSITION = 3;
-    blade::gfx::vertex_layout v_layout = 
+    blade::gfx::vertex_layout v_layout =
         blade::gfx::vertex_layout().begin().value()
-        .get()
-        .add("position", SIZEOF_POSITION, gfx::attribute::datatype::f32, gfx::vertex_semantic::position)
-        .add("color", SIZEOF_POSITION, gfx::attribute::datatype::f32, gfx::vertex_semantic::color)
-        .end();
+                                   .get()
+                                   .add("position", SIZEOF_POSITION, gfx::attribute::datatype::f32,
+                                        gfx::vertex_semantic::position)
+                                   .add("color", SIZEOF_POSITION, gfx::attribute::datatype::f32,
+                                        gfx::vertex_semantic::color)
+                                   .end();
 
     std::vector<vertex> vertices = {
-        {  { -0.5f, -0.5f,  0.0f}, { 1.0f, 0.0f, 0.0f } }, // TOP FRONT RIGHT
-        {  {  0.5f, -0.5f,  0.0f}, { 0.0f, 1.0f, 0.0f } }, // TOP FRONT LEFT 
-        {  {  0.5f,  0.5f,  0.0f}, { 0.0f, 1.0f, 0.0f } }, // TOP FRONT LEFT 
-        {  { -0.5f,  0.5f,  0.0f}, { 0.0f, 0.0f, 1.0f } }, // TOP BACK LEFT
+        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}}, // TOP FRONT RIGHT
+        {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}}, // TOP FRONT LEFT
+        {{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}}, // TOP FRONT LEFT
+        {{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}}, // TOP BACK LEFT
     };
 
     std::vector<blade::u16> indices = {
@@ -108,16 +110,27 @@ int main(void)
     auto buffer_handle = gfx->create_vertex_buffer(&positions_mem, v_layout);
     gfx->attach_vertex_buffer(buffer_handle);
 
+    logger::info("Creating index buffer");
     auto index_handle = gfx->create_index_buffer(&index_mem);
+    logger::info("Created.");
 
     auto vert_file = std::move(vert_opt.value());
     auto frag_file = std::move(frag_opt.value());
 
-    vert_file.open();
-    frag_file.open();
+    if (!vert_file.open())
+    {
+        logger::fatal("Failed to open vertex file");
+    }
+    if (!frag_file.open())
+    {
+        logger::fatal("Failed to open fragment file");
+    };
 
     auto vert_code = vert_file.read_all().value();
     auto frag_code = frag_file.read_all().value();
+
+    logger::debug("Vert size: {}", vert_code.size());
+    logger::debug("Frag size: {}", frag_code.size());
 
     auto vert_handle = gfx->create_shader(vert_code);
     auto frag_handle = gfx->create_shader(frag_code);
@@ -130,12 +143,13 @@ int main(void)
     }
 
     window->show();
+    logger::info("Window opened");
 
     blade::u64 frame_count = 0;
     auto start_time = std::chrono::steady_clock::now();
     while (!window->should_close())
     {
-        gfx->set_viewport(frame, 0, 0, blade::width{ window->get_width() }, blade::height{ window->get_height() });
+        gfx->set_viewport(frame, 0, 0, blade::width{window->get_width()}, blade::height{window->get_height()});
 
         gfx->set_vertex_buffer(buffer_handle);
 
@@ -150,8 +164,8 @@ int main(void)
             auto frame_time = end_time - start_time;
             double fps = 300.f / std::chrono::duration_cast<std::chrono::duration<double>>(frame_time).count();
             logger::info("Frame Rate: {}", fps);
-            std::string title = "Frame Rate: " + std::to_string(fps);
-            window->set_title(title);
+            // std::string title = "Frame Rate: " + std::to_string(fps);
+            // window->set_title(title);
             start_time = std::chrono::steady_clock::now();
         }
 
@@ -161,6 +175,6 @@ int main(void)
     gfx->shutdown();
 
     logger::info("GFX Example");
-    
+
     return 0;
 }

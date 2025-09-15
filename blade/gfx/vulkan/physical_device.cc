@@ -18,7 +18,7 @@ namespace blade
                     logger::warn("Extension name is nullptr");
                     return false;
                 }
-                
+
                 for (const auto& extension_property : _info.extensions)
                 {
                     if (strcmp(extension_name, extension_property.extensionName) == 0)
@@ -83,26 +83,25 @@ namespace blade
 
             std::vector<VkDeviceQueueCreateInfo> physical_device::get_queue_family_infos() const noexcept
             {
-                const f32 queue_priority = 1.0f;
-                std::vector<VkDeviceQueueCreateInfo> create_infos {};
-                std::set<u32> unique_queue_families {};
+                float queue_priority[] = {1.f};
+                std::vector<VkDeviceQueueCreateInfo> create_infos{};
+                std::set<u32> unique_queue_families{};
 
-                if (_info.queue_family_indices.graphics.has_value()) 
+                if (_info.queue_family_indices.graphics.has_value())
                     unique_queue_families.insert(_info.queue_family_indices.graphics.value());
-                if (_info.queue_family_indices.compute.has_value()) 
+                if (_info.queue_family_indices.compute.has_value())
                     unique_queue_families.insert(_info.queue_family_indices.compute.value());
-                if (_info.queue_family_indices.transfer.has_value()) 
+                if (_info.queue_family_indices.transfer.has_value())
                     unique_queue_families.insert(_info.queue_family_indices.transfer.value());
 
                 for (const auto& queue_famliy_index : unique_queue_families)
                 {
-                    VkDeviceQueueCreateInfo queue_info {
-                        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                        .flags = 0,
-                        .queueFamilyIndex = queue_famliy_index,
-                        .queueCount = 1,
-                        .pQueuePriorities = &queue_priority
-                    };
+                    VkDeviceQueueCreateInfo queue_info{};
+                    queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                    queue_info.flags = 0;
+                    queue_info.queueFamilyIndex = queue_famliy_index;
+                    queue_info.queueCount = 1;
+                    queue_info.pQueuePriorities = queue_priority;
                     create_infos.push_back(queue_info);
                 }
 
@@ -113,15 +112,17 @@ namespace blade
             {
                 if (_info.queue_family_indices.present.has_value())
                     return _info.queue_family_indices.present;
-                
+
                 if (_info.queue_families.empty())
                 {
                     u32 queue_family_count = 0;
                     VkQueueFamilyProperties* dummy_properties = nullptr;
 
-                    vkGetPhysicalDeviceQueueFamilyProperties(_info.physical_device, &queue_family_count, dummy_properties);
+                    vkGetPhysicalDeviceQueueFamilyProperties(_info.physical_device, &queue_family_count,
+                                                             dummy_properties);
                     _info.queue_families.resize(queue_family_count);
-                    vkGetPhysicalDeviceQueueFamilyProperties(_info.physical_device, &queue_family_count, _info.queue_families.data());
+                    vkGetPhysicalDeviceQueueFamilyProperties(_info.physical_device, &queue_family_count,
+                                                             _info.queue_families.data());
                 }
 
                 for (usize i = 0; i < _info.queue_families.size(); i++)
@@ -145,7 +146,8 @@ namespace blade
 
                 vkGetPhysicalDeviceQueueFamilyProperties(_info.physical_device, &queue_family_count, dummy_properties);
                 _info.queue_families.resize(queue_family_count);
-                vkGetPhysicalDeviceQueueFamilyProperties(_info.physical_device, &queue_family_count, _info.queue_families.data());
+                vkGetPhysicalDeviceQueueFamilyProperties(_info.physical_device, &queue_family_count,
+                                                         _info.queue_families.data());
 
                 for (usize i = 0; i < _info.queue_families.size(); i++)
                 {
@@ -164,13 +166,15 @@ namespace blade
                 return _info.memory_properties;
             }
 
-            std::optional<u32> physical_device::find_memory_type(u32 type_filter, VkMemoryPropertyFlags properties) const noexcept
+            std::optional<u32> physical_device::find_memory_type(u32 type_filter,
+                                                                 VkMemoryPropertyFlags properties) const noexcept
             {
                 for (u32 i = 0; i < _info.memory_properties.memoryTypeCount; i++)
                 {
-                    if (type_filter & (1 << i) 
-                            && (_info.memory_properties.memoryTypes[i].propertyFlags & properties) == properties
-                    ) {
+                    if (type_filter & (1 << i)
+                        && (_info.memory_properties.memoryTypes[i].propertyFlags & properties) == properties
+                    )
+                    {
                         return i;
                     }
                 }

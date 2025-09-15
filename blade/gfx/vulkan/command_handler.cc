@@ -7,20 +7,24 @@ namespace blade
     {
         namespace vk
         {
-            command_handler::command_handler(std::weak_ptr<class device> device) noexcept
-                : _device{ device}
+            command_handler::command_handler(std::weak_ptr<class device> device, const queue_type queue) noexcept
+                : _device{device}
             {
                 constexpr u32 num_buffers = 16;
-                auto pool_opt = command_pool::builder(device)
-                    .use_allocation_callbacks(nullptr)
-                    .build();
-                _command_pool = pool_opt.value();
-                _all_command_buffers = _command_pool->allocate_buffers(8);
+
+                auto const transfer_pool_opt = command_pool::builder(device)
+                                               .use_allocation_callbacks(nullptr)
+                                               .set_queue_family_index(
+                                                   device.lock()->get_queue_index(queue).value())
+                                               .build();
+                _command_pool = transfer_pool_opt.value();
+                _all_command_buffers = _command_pool->allocate_buffers(num_buffers);
 
                 for (VkCommandBuffer buffer : _all_command_buffers)
                 {
                     VkFence fence = create_fence_().value();
-                    std::unique_ptr<buffer_free_list::node> node = std::make_unique<buffer_free_list::node>(buffer, fence);
+                    auto node = std::make_unique<buffer_free_list::node>(
+                        buffer, fence);
                     _free_list.push_front(node.get());
                     _all_buffer_nodes.push_back(std::move(node));
                 }
@@ -35,7 +39,7 @@ namespace blade
 
                 buffer_free_list::node* node = _free_list.pop_front();
 
-                const u32 flags = 0;
+                constexpr u32 flags = 0;
                 vkResetCommandBuffer(node->command_buffer, flags);
 
                 node->is_submitted = false;
@@ -51,14 +55,14 @@ namespace blade
 
             std::optional<VkFence> command_handler::create_fence_() const noexcept
             {
-                VkFenceCreateInfo fence_info 
+                VkFenceCreateInfo fence_info
                 {
                     .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
                     .flags = VK_FENCE_CREATE_SIGNALED_BIT
                 };
-                VkFence fence {};
+                VkFence fence{};
 
-                VkAllocationCallbacks* callbacks { nullptr };
+                VkAllocationCallbacks* callbacks{nullptr};
                 const VkResult result = vkCreateFence(_device.lock()->handle(), &fence_info, callbacks, &fence);
                 if (result != VK_SUCCESS)
                 {
@@ -76,7 +80,8 @@ namespace blade
                 , const VkSemaphore* signal_semaphores
                 , u32 signal_semaphore_count
                 , VkPipelineStageFlags wait_stage
-            ) const noexcept {
+            ) const noexcept
+            {
                 auto buffer_it = _active_nodes.find(buffer);
                 if (buffer_it == _active_nodes.end())
                 {
@@ -85,7 +90,7 @@ namespace blade
 
                 buffer_free_list::node* node = buffer_it->second;
 
-                VkSubmitInfo submit_info {
+                const VkSubmitInfo submit_info{
                     .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                     .waitSemaphoreCount = wait_semaphore_count,
                     .pWaitSemaphores = wait_semaphores,
@@ -99,9 +104,10 @@ namespace blade
                 vkResetFences(_device.lock()->handle(), 1, &node->fence);
                 const VkResult submit_result = vkQueueSubmit(queue, 1, &submit_info, buffer_it->second->fence);
                 node->is_submitted = true;
-                
+
                 return submit_result;
             }
+
 
             void command_handler::process_completed_buffers_() noexcept
             {
@@ -115,7 +121,7 @@ namespace blade
                             _device.lock()->handle()
                             , node->fence
                         );
-                        
+
                         if (fence_result == VK_SUCCESS)
                         {
                             _free_list.push_front(node);
@@ -135,7 +141,7 @@ namespace blade
                 {
                     return;
                 }
-                
+
                 buffer_free_list::node* node = cb_it->second;
                 if (node->is_submitted)
                 {
@@ -157,15 +163,16 @@ namespace blade
                 vkResetFences(_device.lock()->handle(), 1, &node->fence);
             }
 
-            void command_handler::destroy() noexcept
+            void command_handler::destroy() const noexcept
             {
-                const VkAllocationCallbacks* callbacks { nullptr };
+                const VkAllocationCallbacks* callbacks{nullptr};
                 logger::info("TOTAL BUFFERS: {}", _all_buffer_nodes.size());
                 for (const auto& node : _all_buffer_nodes)
                 {
                     vkDestroyFence(_device.lock()->handle(), node->fence, callbacks);
                 }
-                vkFreeCommandBuffers(_device.lock()->handle(), _command_pool->handle(), _all_command_buffers.size(), _all_command_buffers.data());
+                vkFreeCommandBuffers(_device.lock()->handle(), _command_pool->handle(), _all_command_buffers.size(),
+                                     _all_command_buffers.data());
                 // vkDestroyCommandPool(_device.lock()->handle(), _command_pool->handle(), callbacks);
                 _command_pool->destroy();
             }

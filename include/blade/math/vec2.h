@@ -2,6 +2,7 @@
 #define BLADE_MATH_VEC2_H
 
 #include <array>
+#include <string>
 #include <stdexcept>
 #include "math/traits.h"
 
@@ -9,21 +10,24 @@ namespace blade
 {
     namespace math
     {
-        template<typename T> requires traits::is_number<T>
+        template <typename T> requires traits::is_number<T>
         struct vec2
         {
             [[nodiscard]] vec2() noexcept
-                : _data{ 0.f, 0.f }
-            {}
+                : _data{0.f, 0.f}
+            {
+            }
 
             [[nodiscard]] vec2(T v1, T v2) noexcept
-                : _data{ v1, v2 }
-            {}
+                : _data{v1, v2}
+            {
+            }
 
 
-            [[nodiscard]] vec2(T arr[2]) noexcept 
-                : _data{ arr }
-            {}
+            [[nodiscard]] vec2(T arr[2]) noexcept
+                : _data{arr}
+            {
+            }
 
             vec2(const vec2& other) noexcept
             {
@@ -42,7 +46,7 @@ namespace blade
             {
                 _data[0] = other._data[0];
                 _data[1] = other._data[1];
-                
+
                 return *this;
             }
 
@@ -82,9 +86,8 @@ namespace blade
                 return "(" + std::to_string(_data[0]) + "," + std::to_string(_data[1]) + ")";
             }
 
-            T _data[2] { 0.f, 0.f };
+            T _data[2]{0.f, 0.f};
         };
-
     } // math namespace
 } // blade namespace
 

@@ -13,31 +13,37 @@ namespace blade
                 , std::weak_ptr<class device> device
                 , const VkAllocationCallbacks* callbacks
             ) noexcept
-                : _command_pool{ pool }
-                , _device{ device }
-                , _allocation_callbacks{ callbacks }
-            {}
+                : _command_pool{pool}
+                  , _device{device}
+                  , _allocation_callbacks{callbacks}
+            {
+            }
 
             std::optional<std::shared_ptr<command_pool>> command_pool::builder::build() const noexcept
             {
-                const auto flags = [this]() -> VkCommandPoolCreateFlagBits {
+                const auto flags = [this]() -> VkCommandPoolCreateFlags
+                {
                     switch (info.kind)
                     {
-                        case kind::reset:
-                            return VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-                        case kind::transient:
-                            return VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+                    case kind::transient:
+                        return VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+                    case kind::reset:
+                    default:
+                        return VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
                     }
                 }();
 
-                VkCommandPoolCreateInfo create_info {
+                // TODO: create from queues properly
+                VkCommandPoolCreateInfo create_info{
                     .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-                    .flags = flags
+                    .flags = flags,
+                    .queueFamilyIndex = info.queue_family_index,
                 };
 
-                VkCommandPool pool {};
-                const VkResult result = vkCreateCommandPool(info.device.lock()->handle(), &create_info, info.allocation_callbacks, &pool);
-                
+                VkCommandPool pool{};
+                const VkResult result = vkCreateCommandPool(info.device.lock()->handle(), &create_info,
+                                                            info.allocation_callbacks, &pool);
+
                 if (result != VK_SUCCESS)
                 {
                     return std::nullopt;
@@ -52,8 +58,9 @@ namespace blade
 
                 return *this;
             }
-            
-            command_pool::builder& command_pool::builder::use_allocation_callbacks(const VkAllocationCallbacks* callbacks) noexcept
+
+            command_pool::builder& command_pool::builder::use_allocation_callbacks(
+                const VkAllocationCallbacks* callbacks) noexcept
             {
                 info.allocation_callbacks = callbacks;
 
@@ -62,27 +69,27 @@ namespace blade
 
             std::optional<command_buffer> command_pool::allocate_single() noexcept
             {
-                VkCommandBufferAllocateInfo alloc_info {
+                VkCommandBufferAllocateInfo alloc_info{
                     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
                     .commandPool = _command_pool,
                     .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                     .commandBufferCount = 1 // only allocate 1 
                 };
 
-                VkCommandBuffer buffer {};
+                VkCommandBuffer buffer{};
                 const VkResult result = vkAllocateCommandBuffers(_device.lock()->handle(), &alloc_info, &buffer);
                 if (result != VK_SUCCESS)
                 {
                     return std::nullopt;
                 }
-                
-                return command_buffer{ buffer };
+
+                return command_buffer{buffer};
             }
 
 
             std::vector<VkCommandBuffer> command_pool::allocate_buffers(const u32 num_buffers) noexcept
             {
-                VkCommandBufferAllocateInfo alloc_info {
+                VkCommandBufferAllocateInfo alloc_info{
                     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
                     .commandPool = _command_pool,
                     .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,

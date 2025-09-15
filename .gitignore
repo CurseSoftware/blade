@@ -1,6 +1,8 @@
 build_release/*
 !build_release/.keep
 
+cmake-build-debug/*
+
 build_debug/*
 !build_debug/.keep
 
@@ -17,3 +19,13 @@ lib/*
 .cache/*
 
 compile_commands.json
+
+.idea/
+
+.vs/
+
+cmake-build-debug
+
+build
+
+CMakeSettings.json

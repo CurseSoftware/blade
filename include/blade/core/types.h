@@ -8,6 +8,7 @@
 #endif // _MSC_VER
 
 #include <cstdint>
+#include <cstddef>
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -16,7 +17,7 @@
 namespace blade
 {
     using u8 = uint8_t;
-    using u16 = uint16_t;   
+    using u16 = uint16_t;
     using u32 = uint32_t;
     using u64 = uint64_t;
 
@@ -33,17 +34,21 @@ namespace blade
     /// @brief Struct type for width 
     struct width
     {
-        width(u32 w): w(w) {}
+        width(u32 w) : w(w)
+        {
+        }
 
-        u32 w {0};
+        u32 w{0};
     };
-   
-    /// @brief Struct type for height
-    struct height 
-    {
-        height(u32 h): h(h) {}
 
-        u32 h {0};
+    /// @brief Struct type for height
+    struct height
+    {
+        height(u32 h) : h(h)
+        {
+        }
+
+        u32 h{0};
     };
 } // blade namespace
 

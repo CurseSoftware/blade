@@ -2,6 +2,8 @@
 #include "window/window.h"
 #include "core/core.h"
 
+#ifdef BLADE_PLATFORM_LINUX
+
 #include <X11/X.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -9,21 +11,23 @@
 #include <memory>
 #include <optional>
 
+
 namespace blade
 {
     const unsigned int WINDOW_MIN_WIDTH = 640;
     const unsigned int WINDOW_MIN_HEIGHT = 480;
-    
+
     static i32 current_id = 0;
-        
-    
+
+
     XContext window::_global_x11_context = 0;
 
     std::optional<std::unique_ptr<window>> window::create(
         const std::string& name,
         width w,
         height h
-    ) {
+    )
+    {
         auto wnd = std::make_unique<window>(window(name, w, h));
         wnd->_width = w.w;
         wnd->_height = h.h;
@@ -60,7 +64,7 @@ namespace blade
             const unsigned long white = WhitePixel(wnd->_display, DefaultScreen(wnd->_display));
             const unsigned long background = white;
             const unsigned long border = white;
-            
+
             wnd->_window = XCreateSimpleWindow(
                 wnd->_display,
                 DefaultRootWindow(wnd->_display),
@@ -73,7 +77,7 @@ namespace blade
                 background
             );
 
-            if (!wnd->_window) 
+            if (!wnd->_window)
             {
                 logger::fatal("Failed to create window. XCreateSimpleWindow failed");
                 return std::nullopt;
@@ -83,10 +87,9 @@ namespace blade
         // Choose which events we want to listen for
         {
             const long event_mask = KeyPressMask
-                                  | KeyReleaseMask
-                                  | StructureNotifyMask
-                                  | ExposureMask
-                                  ;
+                | KeyReleaseMask
+                | StructureNotifyMask
+                | ExposureMask;
 
             XSelectInput(
                 wnd->_display,
@@ -101,7 +104,7 @@ namespace blade
             const char* atom_name = "WM_DELETE_WINDOW";
             const bool only_if_exists = true;
             const int count = 1;
-            
+
             wm_protocols = XInternAtom(wnd->_display, atom_name, only_if_exists);
             XSetWMProtocols(wnd->_display, wnd->_window, &wm_protocols, count);
         }
@@ -139,9 +142,9 @@ namespace blade
 
         {
             const int result = XSaveContext(
-                wnd->_display, 
-                wnd->_window, 
-                _global_x11_context, 
+                wnd->_display,
+                wnd->_window,
+                _global_x11_context,
                 reinterpret_cast<XPointer>(wnd.get())
             );
 
@@ -192,8 +195,8 @@ namespace blade
 
     void window::shutdown()
     {
-        events::dispatch(events::window_close {});
-        
+        events::dispatch(events::window_close{});
+
         if (!_is_initialized)
         {
             logger::info("Window '{}' already shutdown. Skipping", _title);
@@ -209,21 +212,23 @@ namespace blade
     void window::_handle_x11_event(XEvent& event)
     {
         window* window = nullptr;
-        const int result = XFindContext(event.xany.display, event.xany.window, _global_x11_context, reinterpret_cast<XPointer*>(&window));
+        const int result = XFindContext(event.xany.display, event.xany.window, _global_x11_context,
+                                        reinterpret_cast<XPointer*>(&window));
         if (result != 0 || window == nullptr)
         {
             logger::fatal("Failed to retrieve window instance from X11 event. Returning early");
             return;
         }
-        
-        switch(event.type)
+
+        switch (event.type)
         {
-            case ClientMessage:
+        case ClientMessage:
             {
                 window->shutdown();
-            } break;
+            }
+            break;
 
-            case ConfigureNotify:
+        case ConfigureNotify:
             {
                 const u32 new_width = static_cast<u32>(event.xconfigure.width);
                 const u32 new_height = static_cast<u32>(event.xconfigure.height);
@@ -231,20 +236,23 @@ namespace blade
                 {
                     window->_handle_resize(width(new_width), height(new_height));
                 }
-            } break;
+            }
+            break;
 
-            case KeyPress:
-            case KeyRelease:
+        case KeyPress:
+        case KeyRelease:
             {
-            } break;
+            }
+            break;
 
-            case FocusIn:
-            case FocusOut:
+        case FocusIn:
+        case FocusOut:
             {
-            } break;
+            }
+            break;
 
-            default:
-                break;
+        default:
+            break;
         }
     }
 
@@ -257,7 +265,7 @@ namespace blade
 
     void window::_pump_messages()
     {
-        XEvent event {};
+        XEvent event{};
         while (XPending(_display) > 0)
         {
             XNextEvent(_display, &event);
@@ -271,7 +279,8 @@ namespace blade
         const std::string& name,
         width w,
         height h
-    ) {
+    )
+    {
         // TODO
         return std::nullopt;
     }
@@ -286,3 +295,5 @@ namespace blade
         return data;
     }
 } // namespace blade
+
+#endif // BLADE_PLATFORM_LINUX

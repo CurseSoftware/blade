@@ -1,10 +1,10 @@
 #ifndef BLADE_GFX_VERTEX_H
 #define BLADE_GFX_VERTEX_H
 
-#include "core/core.h"
-#include "math/math.h"
-#include "math/vec2.h"
-#include "math/vec3.h"
+#include "blade/core/core.h"
+#include "blade/math/math.h"
+#include "blade/math/vec2.h"
+#include "blade/math/vec3.h"
 
 #include <exception>
 #include <functional>
@@ -29,8 +29,8 @@ namespace blade
 
         struct attribute
         {
-            const char* name { nullptr };
-            u32 count { 0 };
+            const char* name{nullptr};
+            u32 count{0};
 
             enum class datatype : u32
             {
@@ -39,20 +39,20 @@ namespace blade
                 f32 = 2
             } type;
 
-            vertex_semantic semantic { vertex_semantic::position };
+            vertex_semantic semantic{vertex_semantic::position};
 
-            u32 offset { 0 };
+            u32 offset{0};
 
             static usize datatype_to_size(datatype dt)
             {
                 switch (dt)
                 {
-                    case datatype::f32:
-                        return sizeof(float);
-                    case datatype::uint_8:
-                        return sizeof(u8);
-                    case datatype::int_16:
-                        return sizeof(i16);
+                case datatype::f32:
+                    return sizeof(float);
+                case datatype::uint_8:
+                    return sizeof(u8);
+                case datatype::int_16:
+                    return sizeof(i16);
                 }
             }
 
@@ -66,12 +66,14 @@ namespace blade
 
             struct recording
             {
-                recording(struct vertex_layout& layout) noexcept 
-                    : _layout{ layout } 
-                {}
+                explicit recording(struct vertex_layout& layout) noexcept
+                    : _layout{layout}
+                {
+                }
 
-                vertex_layout& end() const noexcept;
-                [[nodiscard]] recording& add(const char*, u32 count, attribute::datatype type, const vertex_semantic semantic) noexcept;
+                [[nodiscard]] vertex_layout& end() const noexcept;
+                [[nodiscard]] recording& add(const char*, u32 count, attribute::datatype type,
+                                             const vertex_semantic semantic) noexcept;
 
             private:
                 vertex_layout& _layout;
@@ -79,13 +81,13 @@ namespace blade
 
             std::optional<std::reference_wrapper<recording>> begin()
             {
-                if (_state != state::uninitialized) 
+                if (_state != state::uninitialized)
                 {
                     return std::nullopt;
                 }
 
                 _state = state::recording;
-                
+
                 return _recording;
             }
 
@@ -118,11 +120,10 @@ namespace blade
             void add_attribute_(attribute attrib) noexcept
             {
                 attrib.offset = _stride;
-                
-                _stride += attribute::datatype_to_size(attrib.type) * attrib.count;
-                
-                _attributes.push_back(attrib);
 
+                _stride += attribute::datatype_to_size(attrib.type) * attrib.count;
+
+                _attributes.push_back(attrib);
             }
 
         private:
@@ -131,14 +132,14 @@ namespace blade
                 uninitialized,
                 recording,
                 finalized
-            } _state { state::uninitialized };
+            } _state{state::uninitialized};
 
-            std::vector<attribute> _attributes {};
+            std::vector<attribute> _attributes{};
 
-            usize _attribute_index { 0 };
-            u32 _stride { 0 };
+            usize _attribute_index{0};
+            u32 _stride{0};
 
-            recording _recording { *this };
+            recording _recording{*this};
         };
     } // gfx namespace
 } // blade namespace

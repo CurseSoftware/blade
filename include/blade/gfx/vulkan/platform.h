@@ -13,11 +13,13 @@ namespace blade
         {
 #ifdef BLADE_PLATFORM_LINUX
             inline const auto& vkCreateSurfaceKHR = vkCreateXlibSurfaceKHR;
-            inline const auto&  VK_STRUCTURE_TYPE_SURFACE_CREATE_INFO_KHR = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+            inline const auto& VK_STRUCTURE_TYPE_SURFACE_CREATE_INFO_KHR =
+                VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
             using VkSurfaceCreateInfo = VkXlibSurfaceCreateInfoKHR;
 #elif defined(BLADE_PLATFORM_WINDOWS)
-            const auto& vkCreateSurfaceKHR = vkCreateWin32SurfaceKHR;
-            const auto&  VK_STRUCTURE_TYPE_SURFACE_CREATE_INFO_KHR = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+            inline const auto& vkCreateSurfaceKHR = vkCreateWin32SurfaceKHR;
+            inline const auto& VK_STRUCTURE_TYPE_SURFACE_CREATE_INFO_KHR =
+                VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
             using VkSurfaceCreateInfo = VkWin32SurfaceCreateInfoKHR;
 #endif
 

@@ -140,9 +140,9 @@ namespace blade
                             : info { device }
                         {}
 
-                        std::optional<std::shared_ptr<command_pool>> build() const noexcept;
+                        [[nodiscard]] std::optional<std::shared_ptr<command_pool>> build() const noexcept;
 
-                        builder& set_queue_family_index(const u32 index) noexcept;
+                        builder& set_queue_family_index(u32 index) noexcept;
                         builder& use_allocation_callbacks(const VkAllocationCallbacks* callbacks) noexcept;
 
                         struct
@@ -150,7 +150,7 @@ namespace blade
                             std::weak_ptr<class device> device                  {};
                             enum kind kind                                      { kind::reset };
                             const VkAllocationCallbacks* allocation_callbacks   { nullptr };
-                            u32 queue_family_index                              { std::numeric_limits<u32>::max() };
+                            u32 queue_family_index                              { 0 };
                         } info {};
                     };
 

@@ -60,7 +60,7 @@ namespace blade
                     std::unordered_map<shader_handle, shader> _shaders         {};
                     std::unordered_map<program_handle, program> _programs      {};
 
-                    std::shared_ptr<command_handler> _cmd_handler              { nullptr };
+                    std::shared_ptr<command_handler> _transfer_cmd_handler              { nullptr };
                     u16 _buffer_handle_index { 0 };
 
                     std::unordered_map<buffer_handle, std::shared_ptr<buffer>> _vertex_input_infos  {};

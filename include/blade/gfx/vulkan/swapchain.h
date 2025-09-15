@@ -78,7 +78,7 @@ namespace blade
                                 VkAllocationCallbacks* allocation_callbacks { nullptr };
                                 VkFormat preferred_format { VK_FORMAT_R8G8B8A8_UNORM };
                                 u32 min_image_count { 0 };
-                                VkImageUsageFlagBits image_usage { };
+                                VkImageUsageFlags image_usage { };
                                 VkCompositeAlphaFlagBitsKHR composite_alpha { VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR };
                                 VkBool32 clipped { VK_TRUE };
                                 VkSwapchainKHR old_swapchain { VK_NULL_HANDLE };

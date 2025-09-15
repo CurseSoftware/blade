@@ -9,18 +9,18 @@ namespace blade
         {
             std::optional<shader> shader::builder::build() const noexcept
             {
-                shader shader_module { info.device };
+                shader shader_module{info.device};
 
                 if (info.code.size() == 0)
                 {
                     return std::nullopt;
                 }
 
-                VkShaderModuleCreateInfo create_info {};
+                VkShaderModuleCreateInfo create_info{};
                 create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
                 create_info.codeSize = info.code.size();
                 create_info.pCode = reinterpret_cast<const u32*>(info.code.data());
-                
+
                 const VkResult result = vkCreateShaderModule(
                     info.device.handle()
                     , &create_info
@@ -35,14 +35,14 @@ namespace blade
 
                 return shader_module;
             }
-            
+
             shader::builder& shader::builder::use_allocation_callbacks(VkAllocationCallbacks* callbacks) noexcept
             {
                 info.callbacks = callbacks;
 
                 return *this;
             }
-            
+
             shader::builder& shader::builder::set_code(const std::vector<u8>& code) noexcept
             {
                 info.code = code;
