@@ -1,6 +1,18 @@
 # Blade Game & Application Library
 Cross platform utility library for constructing games and applications in C++.
 
+## NOTE:
+Some development on this has been halted to efforts shifing to the [Rendering Hardware Interface](https://github.com/CurseSoftware/rhi) which will be used inside the graphics library in Blade.
+Some other development effort has been spent on the (Experimental Viper Language Toolchain)[https://github.com/CurseSoftware/viper] which is an unrelated project, but still taking development resources.
+
+## Purpose
+We wish to build a library for C++ that is useful for creating graphics applications.
+To achieve this, we are maintaining it as cross-platform (Linux & Windows) with Macos support planned.
+
+We wish for the APIs to be natural to use in most C++ environments, and we also wish that each component of the library can be used independently as a standalone utility. This means that if you just want to use the rendering API without our Windowing API, you can. As such, this means that the "sub-libraries" of the whole library are not dependent on the others.
+
+In the future, we want there to be a way to grab the desired sub-libraries individually without fetching the entire thing.
+
 ## Building
 #### Build Requirements
 C++ 20 compliant compiler
