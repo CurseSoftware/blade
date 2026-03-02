@@ -2,7 +2,7 @@
 Cross platform utility library for constructing games and applications in C++.
 
 ## NOTE:
-Some development on this has been halted to efforts shifing to the [Rendering Hardware Interface](https://github.com/CurseSoftware/rhi) which will be used inside the graphics library in Blade.
+Some development on this has been halted to efforts shifing to the [xgpu Rendering Hardware Interface](https://github.com/CurseSoftware/xgpu) which will be used inside the graphics library in Blade.
 Some other development effort has been spent on the (Experimental Viper Language Toolchain)[https://github.com/CurseSoftware/viper] which is an unrelated project, but still taking development resources.
 
 ## Purpose
